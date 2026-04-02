@@ -475,6 +475,7 @@ export default function Upload() {
         state: { results: scores, columns, target },
       });
     } catch (err) {
+      localStorage.clear()
       console.error(err);
       setError(
         err.response?.data?.detail || "Something went wrong. Please try again.",

@@ -5,31 +5,58 @@ import API from "../api";
 import { useNavigate } from "react-router-dom";
 
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
-  ResponsiveContainer, PieChart, Pie, Cell, Legend,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
 } from "recharts";
 
 // ── Tokens ────────────────────────────────────────────────────────────────────
-const ACCENT   = "#63d2b3";
-const VIOLET   = "#a78bfa";
-const GOLD     = "#f0c040";
-const RED      = "#f87171";
+const ACCENT = "#63d2b3";
+const VIOLET = "#a78bfa";
+
+const RED = "#f87171";
 const TEXT_DIM = "#9ca3af";
 const TEXT_MUT = "#6b7280";
-const BORDER   = "rgba(255,255,255,0.07)";
+const BORDER = "rgba(255,255,255,0.07)";
 
-const PIE_COLORS = ["#63d2b3","#a78bfa","#f0c040","#f87171","#60a5fa","#fb923c","#34d399","#e879f9"];
+const PIE_COLORS = [
+  "#63d2b3",
+  "#a78bfa",
+  "#f0c040",
+  "#f87171",
+  "#60a5fa",
+  "#fb923c",
+  "#34d399",
+  "#e879f9",
+];
 
 // ── Tooltip ───────────────────────────────────────────────────────────────────
 const ChartTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{
-      background: "#111318", border: "1px solid rgba(99,210,179,0.25)",
-      borderRadius: 2, padding: "8px 14px",
-      fontFamily: "'DM Mono',monospace", fontSize: 11,
-    }}>
-      {label && <div style={{ color: TEXT_MUT, marginBottom: 4, fontSize: 10 }}>{label}</div>}
+    <div
+      style={{
+        background: "#111318",
+        border: "1px solid rgba(99,210,179,0.25)",
+        borderRadius: 2,
+        padding: "8px 14px",
+        fontFamily: "'DM Mono',monospace",
+        fontSize: 11,
+      }}
+    >
+      {label && (
+        <div style={{ color: TEXT_MUT, marginBottom: 4, fontSize: 10 }}>
+          {label}
+        </div>
+      )}
       {payload.map((p, i) => (
         <div key={i} style={{ color: p.color || ACCENT }}>
           {p.name ? `${p.name}: ` : ""}
@@ -44,7 +71,8 @@ const ChartTooltip = ({ active, payload, label }) => {
 const corrColor = (val) => {
   const v = Math.max(-1, Math.min(1, val));
   if (v > 0) return `rgba(99,210,179,${(v * 0.75 + 0.1).toFixed(2)})`;
-  if (v < 0) return `rgba(248,113,113,${(Math.abs(v) * 0.75 + 0.1).toFixed(2)})`;
+  if (v < 0)
+    return `rgba(248,113,113,${(Math.abs(v) * 0.75 + 0.1).toFixed(2)})`;
   return "transparent";
 };
 
@@ -53,13 +81,34 @@ const ScoreBar = ({ value, color = ACCENT }) => {
   const pct = Math.min(Math.max(value * 100, 0), 100).toFixed(1);
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-      <div style={{ flex: 1, height: 3, background: "rgba(255,255,255,0.06)", borderRadius: 999, overflow: "hidden" }}>
-        <div style={{
-          height: "100%", width: `${pct}%`, background: color,
-          borderRadius: 999, transition: "width 0.8s cubic-bezier(0.16,1,0.3,1)",
-        }} />
+      <div
+        style={{
+          flex: 1,
+          height: 3,
+          background: "rgba(255,255,255,0.06)",
+          borderRadius: 999,
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            height: "100%",
+            width: `${pct}%`,
+            background: color,
+            borderRadius: 999,
+            transition: "width 0.8s cubic-bezier(0.16,1,0.3,1)",
+          }}
+        />
       </div>
-      <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: TEXT_DIM, minWidth: 42, textAlign: "right" }}>
+      <span
+        style={{
+          fontFamily: "'DM Mono',monospace",
+          fontSize: 11,
+          color: TEXT_DIM,
+          minWidth: 42,
+          textAlign: "right",
+        }}
+      >
         {pct}%
       </span>
     </div>
@@ -242,7 +291,26 @@ const styles = `
   .loading-dots span:nth-child(1) { animation-delay: 0s; }
   .loading-dots span:nth-child(2) { animation-delay: 0.18s; }
   .loading-dots span:nth-child(3) { animation-delay: 0.36s; }
+  .ghost-btn {
+    margin-top: 8px;
+    padding: 10px 24px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    background: transparent;
+    color: var(--text-dim);
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+  }
 
+  .ghost-btn:hover {
+    border-color: rgba(255,255,255,0.18);
+    color: var(--text);
+  }
   @keyframes dot-bounce {
     0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
     40%           { transform: scale(1);   opacity: 1; }
@@ -258,48 +326,97 @@ const STAT_KEYS = ["count", "mean", "std", "min", "25%", "50%", "75%", "max"];
 // ── Model scores panel ────────────────────────────────────────────────────────
 function ModelScores({ scores, bestModel }) {
   if (!scores || Object.keys(scores).length === 0) return null;
-  const isCls = Object.values(scores).some((s) => s?.test_accuracy !== undefined);
+  const isCls = Object.values(scores).some(
+    (s) => s?.test_accuracy !== undefined,
+  );
 
   return (
     <div className="section" style={{ animationDelay: "0.10s" }}>
       <div className="section-label">Model Comparison</div>
       <div className="scores-grid">
         {Object.entries(scores).map(([name, s]) => {
-          if (s?.error) return (
-            <div className="score-card" key={name}>
-              <div className="score-card-name">{name}</div>
-              <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: RED }}>{s.error}</div>
-            </div>
-          );
-          const shortName = name.replace("Classifier","").replace("Regressor","").replace("Regression","Reg");
+          if (s?.error)
+            return (
+              <div className="score-card" key={name}>
+                <div className="score-card-name">{name}</div>
+                <div
+                  style={{
+                    fontFamily: "'DM Mono',monospace",
+                    fontSize: 11,
+                    color: RED,
+                  }}
+                >
+                  {s.error}
+                </div>
+              </div>
+            );
+          const shortName = name
+            .replace("Classifier", "")
+            .replace("Regressor", "")
+            .replace("Regression", "Reg");
           const isBest = name.includes(bestModel || "");
           return (
-            <div className="score-card" key={name} style={isBest ? { borderColor: "rgba(99,210,179,0.25)" } : {}}>
+            <div
+              className="score-card"
+              key={name}
+              style={isBest ? { borderColor: "rgba(99,210,179,0.25)" } : {}}
+            >
               <div className={`score-card-name ${isBest ? "best" : ""}`}>
-                <svg width="8" height="8" viewBox="0 0 10 10" fill="currentColor"><circle cx="5" cy="5" r="5"/></svg>
+                <svg
+                  width="8"
+                  height="8"
+                  viewBox="0 0 10 10"
+                  fill="currentColor"
+                >
+                  <circle cx="5" cy="5" r="5" />
+                </svg>
                 {shortName}
-                {isBest && <span className="badge badge-green" style={{ marginLeft: "auto" }}>best</span>}
+                {isBest && (
+                  <span
+                    className="badge badge-green"
+                    style={{ marginLeft: "auto" }}
+                  >
+                    best
+                  </span>
+                )}
               </div>
 
               {isCls ? (
                 <>
                   <div className="score-metric">
-                    <div className="score-metric-label">CV score (f1-weighted)</div>
-                    <div className="score-metric-num">{s.cv_mean} <span style={{ color: TEXT_MUT }}>± {s.cv_std}</span></div>
-                    <ScoreBar value={s.cv_mean} color={isBest ? ACCENT : VIOLET} />
+                    <div className="score-metric-label">
+                      CV score (f1-weighted)
+                    </div>
+                    <div className="score-metric-num">
+                      {s.cv_mean}{" "}
+                      <span style={{ color: TEXT_MUT }}>± {s.cv_std}</span>
+                    </div>
+                    <ScoreBar
+                      value={s.cv_mean}
+                      color={isBest ? ACCENT : VIOLET}
+                    />
                   </div>
                   <div className="score-metric">
                     <div className="score-metric-label">Test accuracy</div>
                     <div className="score-metric-num">{s.test_accuracy}</div>
-                    <ScoreBar value={s.test_accuracy} color={isBest ? ACCENT : VIOLET} />
+                    <ScoreBar
+                      value={s.test_accuracy}
+                      color={isBest ? ACCENT : VIOLET}
+                    />
                   </div>
                 </>
               ) : (
                 <>
                   <div className="score-metric">
                     <div className="score-metric-label">CV R² (mean ± std)</div>
-                    <div className="score-metric-num">{s.cv_mean_r2} <span style={{ color: TEXT_MUT }}>± {s.cv_std}</span></div>
-                    <ScoreBar value={Math.max(0, s.cv_mean_r2)} color={isBest ? ACCENT : VIOLET} />
+                    <div className="score-metric-num">
+                      {s.cv_mean_r2}{" "}
+                      <span style={{ color: TEXT_MUT }}>± {s.cv_std}</span>
+                    </div>
+                    <ScoreBar
+                      value={Math.max(0, s.cv_mean_r2)}
+                      color={isBest ? ACCENT : VIOLET}
+                    />
                   </div>
                   <div className="score-metric">
                     <div className="score-metric-label">Test MAE</div>
@@ -317,69 +434,100 @@ function ModelScores({ scores, bestModel }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 export default function EDA() {
-  const [data, setData]     = useState(null);
+  const [data, setData] = useState(null);
   const [trainRes, setTrainRes] = useState(null);
-  const [error, setError]   = useState(null);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-  const stored = localStorage.getItem("automl_results");
+    const stored = localStorage.getItem("automl_results");
 
-  // 🚨 If no results → don't even call backend
-  if (!stored) {
-    setError("No dataset loaded. Please upload a dataset first.");
-    return;
-  }
+    // 🚨 If no results → don't even call backend
+    if (!stored) {
+      setError("No dataset loaded. Please upload a dataset first.");
+      return;
+    }
 
-  axios.get(`${API}/eda`)
-    .then((res) => setData(res.data))
-    .catch((err) => setError(err.response?.data?.detail || "Failed to load EDA data."));
-}, []);
+    axios
+      .get(`${API}/eda`)
+      .then((res) => setData(res.data))
+      .catch((err) =>
+        setError(err.response?.data?.detail || "Failed to load EDA data."),
+      );
+  }, []);
 
   // Fetch latest train result for the scores panel (optional — may not exist)
   useEffect(() => {
-    axios.get(`${API}/model_info`)
+    axios
+      .get(`${API}/model_info`)
       .then((res) => setTrainRes(res.data))
       .catch(() => {});
   }, []);
 
   if (!data && !error)
     return (
-      <Layout><style>{styles}</style>
-        <div className="eda-root"><div className="eda-inner">
-          <div className="state-card">
-            <div className="loading-dots"><span/><span/><span/></div>
-            <div className="state-title">Analysing dataset…</div>
-            <div className="state-sub">Fetching EDA from server</div>
+      <Layout>
+        <style>{styles}</style>
+        <div className="eda-root">
+          <div className="eda-inner">
+            <div className="state-card">
+              <div className="loading-dots">
+                <span />
+                <span />
+                <span />
+              </div>
+              <div className="state-title">Analysing dataset…</div>
+              <div className="state-sub">Fetching EDA from server</div>
+            </div>
           </div>
-        </div></div>
+        </div>
       </Layout>
     );
 
   if (error)
     return (
-      <Layout><style>{styles}</style>
-        <div className="eda-root"><div className="eda-inner">
-          <div className="state-card">
-            <div className="state-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="1.5">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="12" y1="8" x2="12" y2="12"/>
-                <line x1="12" y1="16" x2="12.01" y2="16"/>
-              </svg>
+      <Layout>
+        <style>{styles}</style>
+        <div className="eda-root">
+          <div className="eda-inner">
+            <div className="state-card">
+              <div className="state-icon">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#f87171"
+                  strokeWidth="1.5"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+              </div>
+              <div className="state-title" style={{ color: "#f87171" }}>
+                {error}
+              </div>
+              <div className="state-sub">
+                Check that a dataset has been uploaded and trained.
+              </div>
+              <button
+                className="ghost-btn"
+                onClick={() => (window.location.href = "/")}
+              >
+                Go to Upload
+              </button>
             </div>
-            <div className="state-title" style={{ color: "#f87171" }}>{error}</div>
-            <div className="state-sub">Check that a dataset has been uploaded and trained.</div>
           </div>
-        </div></div>
+        </div>
       </Layout>
     );
 
   // Derived
   const missingEntries = Object.entries(data.missing || {});
-  const maxMissing     = Math.max(...missingEntries.map(([, v]) => v), 1);
+  const maxMissing = Math.max(...missingEntries.map(([, v]) => v), 1);
   const summaryColNames = Object.keys(data.summary || {});
-  const numericCols     = data.numeric_columns || [];
+  const numericCols = data.numeric_columns || [];
   const categoricalCols = data.categorical_columns || [];
 
   return (
@@ -387,23 +535,32 @@ export default function EDA() {
       <style>{styles}</style>
       <div className="eda-root">
         <div className="eda-inner">
-
           {/* ── Header ── */}
           <div className="page-header">
             <div className="page-eyebrow">AutoML · Exploratory Analysis</div>
             <h1 className="page-title">
               EDA <span>Dashboard</span>
               {data.has_model && (
-                <span style={{ marginLeft: 12 }} className="badge badge-green">● model ready</span>
+                <span style={{ marginLeft: 12 }} className="badge badge-green">
+                  ● model ready
+                </span>
               )}
             </h1>
           </div>
 
           {/* ── Stat strip ── */}
-          <div className="stat-strip" style={{ animation: "fadeUp 0.42s cubic-bezier(0.16,1,0.3,1) both", animationDelay: "0.04s" }}>
+          <div
+            className="stat-strip"
+            style={{
+              animation: "fadeUp 0.42s cubic-bezier(0.16,1,0.3,1) both",
+              animationDelay: "0.04s",
+            }}
+          >
             <div className="stat-cell">
               <div className="stat-cell-label">Rows</div>
-              <div className="stat-cell-value">{(data.num_rows || 0).toLocaleString()}</div>
+              <div className="stat-cell-value">
+                {(data.num_rows || 0).toLocaleString()}
+              </div>
             </div>
             <div className="stat-cell">
               <div className="stat-cell-label">Columns</div>
@@ -411,11 +568,15 @@ export default function EDA() {
             </div>
             <div className="stat-cell">
               <div className="stat-cell-label">Numeric</div>
-              <div className="stat-cell-value"><span>{numericCols.length}</span></div>
+              <div className="stat-cell-value">
+                <span>{numericCols.length}</span>
+              </div>
             </div>
             <div className="stat-cell">
               <div className="stat-cell-label">Categorical</div>
-              <div className="stat-cell-value"><span style={{ color: VIOLET }}>{categoricalCols.length}</span></div>
+              <div className="stat-cell-value">
+                <span style={{ color: VIOLET }}>{categoricalCols.length}</span>
+              </div>
             </div>
             <div className="stat-cell">
               <div className="stat-cell-label">Missing</div>
@@ -435,10 +596,18 @@ export default function EDA() {
                 const isNum = numericCols.includes(col);
                 const isCat = categoricalCols.includes(col);
                 return (
-                  <div className="col-pill" key={col} style={{
-                    borderColor: isNum ? "rgba(99,210,179,0.2)" : isCat ? "rgba(167,139,250,0.2)" : undefined,
-                    color: isNum ? ACCENT : isCat ? VIOLET : undefined,
-                  }}>
+                  <div
+                    className="col-pill"
+                    key={col}
+                    style={{
+                      borderColor: isNum
+                        ? "rgba(99,210,179,0.2)"
+                        : isCat
+                          ? "rgba(167,139,250,0.2)"
+                          : undefined,
+                      color: isNum ? ACCENT : isCat ? VIOLET : undefined,
+                    }}
+                  >
                     {col}
                   </div>
                 );
@@ -450,13 +619,23 @@ export default function EDA() {
           <div className="section" style={{ animationDelay: "0.08s" }}>
             <div className="section-label">Sample Data</div>
             <div className="panel">
-              <div className="panel-bar"/>
+              <div className="panel-bar" />
               <div className="table-scroll">
                 <table className="data-table">
-                  <thead><tr>{data.columns.map((col) => <th key={col}>{col}</th>)}</tr></thead>
+                  <thead>
+                    <tr>
+                      {data.columns.map((col) => (
+                        <th key={col}>{col}</th>
+                      ))}
+                    </tr>
+                  </thead>
                   <tbody>
                     {data.sample.map((row, i) => (
-                      <tr key={i}>{data.columns.map((col) => <td key={`${i}-${col}`}>{row[col] ?? "—"}</td>)}</tr>
+                      <tr key={i}>
+                        {data.columns.map((col) => (
+                          <td key={`${i}-${col}`}>{row[col] ?? "—"}</td>
+                        ))}
+                      </tr>
                     ))}
                   </tbody>
                 </table>
@@ -466,79 +645,153 @@ export default function EDA() {
 
           {/* ── Model scores (shown if train result cached) ── */}
           {data.has_model && trainRes && (
-            <ModelScores scores={trainRes._scores} bestModel={trainRes.model_type} />
+            <ModelScores
+              scores={trainRes._scores}
+              bestModel={trainRes.model_type}
+            />
           )}
 
           {/* ── Histograms ── */}
-          {data.histograms && numericCols.length > 0 && Object.keys(data.histograms).length > 0 && (
-            <div className="section" style={{ animationDelay: "0.12s" }}>
-              <div className="section-label">Histograms</div>
-              <div className="chart-grid">
-                {Object.entries(data.histograms).map(([col, values]) => (
-                  <div className="chart-card" key={col}>
-                    <div className="chart-card-bar"/>
-                    <div className="chart-card-body">
-                      <div className="chart-col-name"><div className="chart-col-dot"/>{col}</div>
-                      <ResponsiveContainer width="100%" height={200}>
-                        <BarChart data={values} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
-                          <CartesianGrid strokeDasharray="2 4" stroke={BORDER} vertical={false}/>
-                          <XAxis dataKey="bin" tick={{ fill: TEXT_MUT, fontSize: 9, fontFamily: "'DM Mono'" }} axisLine={false} tickLine={false}/>
-                          <YAxis tick={{ fill: TEXT_MUT, fontSize: 9, fontFamily: "'DM Mono'" }} axisLine={false} tickLine={false}/>
-                          <Tooltip content={<ChartTooltip/>} cursor={{ fill: "rgba(99,210,179,0.06)" }}/>
-                          <Bar dataKey="count" fill={ACCENT} radius={[2,2,0,0]}/>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* ── Categorical pie charts ── */}
-          {data.categorical && categoricalCols.length > 0 && Object.keys(data.categorical).length > 0 && (
-            <div className="section" style={{ animationDelay: "0.15s" }}>
-              <div className="section-label">Categorical Distribution</div>
-              <div className="chart-grid">
-                {Object.entries(data.categorical).map(([col, values]) => {
-                  const chartData = Object.entries(values).map(([k, v]) => ({ name: k, value: v }));
-                  return (
+          {data.histograms &&
+            numericCols.length > 0 &&
+            Object.keys(data.histograms).length > 0 && (
+              <div className="section" style={{ animationDelay: "0.12s" }}>
+                <div className="section-label">Histograms</div>
+                <div className="chart-grid">
+                  {Object.entries(data.histograms).map(([col, values]) => (
                     <div className="chart-card" key={col}>
-                      <div className="chart-card-bar violet"/>
+                      <div className="chart-card-bar" />
                       <div className="chart-card-body">
-                        <div className="chart-col-name"><div className="chart-col-dot violet"/>{col}</div>
-                        <ResponsiveContainer width="100%" height={220}>
-                          <PieChart>
-                            <Pie data={chartData} dataKey="value" nameKey="name" outerRadius={80} innerRadius={36} paddingAngle={2}>
-                              {chartData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} stroke="none"/>)}
-                            </Pie>
-                            <Tooltip content={<ChartTooltip/>}/>
-                            <Legend iconType="circle" iconSize={7} formatter={(val) => (
-                              <span style={{ color: TEXT_DIM, fontFamily: "'DM Mono'", fontSize: 10 }}>{val}</span>
-                            )}/>
-                          </PieChart>
+                        <div className="chart-col-name">
+                          <div className="chart-col-dot" />
+                          {col}
+                        </div>
+                        <ResponsiveContainer width="100%" height={200}>
+                          <BarChart
+                            data={values}
+                            margin={{ top: 0, right: 0, bottom: 0, left: -20 }}
+                          >
+                            <CartesianGrid
+                              strokeDasharray="2 4"
+                              stroke={BORDER}
+                              vertical={false}
+                            />
+                            <XAxis
+                              dataKey="bin"
+                              tick={{
+                                fill: TEXT_MUT,
+                                fontSize: 9,
+                                fontFamily: "'DM Mono'",
+                              }}
+                              axisLine={false}
+                              tickLine={false}
+                            />
+                            <YAxis
+                              tick={{
+                                fill: TEXT_MUT,
+                                fontSize: 9,
+                                fontFamily: "'DM Mono'",
+                              }}
+                              axisLine={false}
+                              tickLine={false}
+                            />
+                            <Tooltip
+                              content={<ChartTooltip />}
+                              cursor={{ fill: "rgba(99,210,179,0.06)" }}
+                            />
+                            <Bar
+                              dataKey="count"
+                              fill={ACCENT}
+                              radius={[2, 2, 0, 0]}
+                            />
+                          </BarChart>
                         </ResponsiveContainer>
                       </div>
                     </div>
-                  );
-                })}
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+
+          {/* ── Categorical pie charts ── */}
+          {data.categorical &&
+            categoricalCols.length > 0 &&
+            Object.keys(data.categorical).length > 0 && (
+              <div className="section" style={{ animationDelay: "0.15s" }}>
+                <div className="section-label">Categorical Distribution</div>
+                <div className="chart-grid">
+                  {Object.entries(data.categorical).map(([col, values]) => {
+                    const chartData = Object.entries(values).map(([k, v]) => ({
+                      name: k,
+                      value: v,
+                    }));
+                    return (
+                      <div className="chart-card" key={col}>
+                        <div className="chart-card-bar violet" />
+                        <div className="chart-card-body">
+                          <div className="chart-col-name">
+                            <div className="chart-col-dot violet" />
+                            {col}
+                          </div>
+                          <ResponsiveContainer width="100%" height={220}>
+                            <PieChart>
+                              <Pie
+                                data={chartData}
+                                dataKey="value"
+                                nameKey="name"
+                                outerRadius={80}
+                                innerRadius={36}
+                                paddingAngle={2}
+                              >
+                                {chartData.map((_, i) => (
+                                  <Cell
+                                    key={i}
+                                    fill={PIE_COLORS[i % PIE_COLORS.length]}
+                                    stroke="none"
+                                  />
+                                ))}
+                              </Pie>
+                              <Tooltip content={<ChartTooltip />} />
+                              <Legend
+                                iconType="circle"
+                                iconSize={7}
+                                formatter={(val) => (
+                                  <span
+                                    style={{
+                                      color: TEXT_DIM,
+                                      fontFamily: "'DM Mono'",
+                                      fontSize: 10,
+                                    }}
+                                  >
+                                    {val}
+                                  </span>
+                                )}
+                              />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
           {/* ── Correlation matrix ── */}
           {data.correlation && Object.keys(data.correlation).length > 0 && (
             <div className="section" style={{ animationDelay: "0.18s" }}>
               <div className="section-label">Correlation Matrix</div>
               <div className="panel">
-                <div className="panel-bar gold"/>
+                <div className="panel-bar gold" />
                 <div className="panel-body">
                   <div className="corr-scroll">
                     <table className="corr-table">
                       <thead>
                         <tr>
-                          <th/>
-                          {Object.keys(data.correlation).map((col) => <th key={col}>{col}</th>)}
+                          <th />
+                          {Object.keys(data.correlation).map((col) => (
+                            <th key={col}>{col}</th>
+                          ))}
                         </tr>
                       </thead>
                       <tbody>
@@ -546,7 +799,14 @@ export default function EDA() {
                           <tr key={row}>
                             <th>{row}</th>
                             {Object.values(cols).map((val, i) => (
-                              <td key={i} style={{ background: corrColor(val), color: Math.abs(val) > 0.5 ? "#e8eaf0" : TEXT_DIM }}>
+                              <td
+                                key={i}
+                                style={{
+                                  background: corrColor(val),
+                                  color:
+                                    Math.abs(val) > 0.5 ? "#e8eaf0" : TEXT_DIM,
+                                }}
+                              >
                                 {val.toFixed(2)}
                               </td>
                             ))}
@@ -565,19 +825,58 @@ export default function EDA() {
             <div className="section" style={{ animationDelay: "0.21s" }}>
               <div className="section-label">Feature Importance</div>
               <div className="panel">
-                <div className="panel-bar violet"/>
+                <div className="panel-bar violet" />
                 <div className="panel-body">
-                  <ResponsiveContainer width="100%" height={Math.max(200, Object.keys(data.importance).length * 28)}>
+                  <ResponsiveContainer
+                    width="100%"
+                    height={Math.max(
+                      200,
+                      Object.keys(data.importance).length * 28,
+                    )}
+                  >
                     <BarChart
                       layout="vertical"
-                      data={Object.entries(data.importance).sort((a,b) => b[1]-a[1]).map(([k,v]) => ({ name: k, value: v }))}
+                      data={Object.entries(data.importance)
+                        .sort((a, b) => b[1] - a[1])
+                        .map(([k, v]) => ({ name: k, value: v }))}
                       margin={{ top: 0, right: 20, bottom: 0, left: 20 }}
                     >
-                      <CartesianGrid strokeDasharray="2 4" stroke={BORDER} horizontal={false}/>
-                      <XAxis type="number" tick={{ fill: TEXT_MUT, fontSize: 9, fontFamily: "'DM Mono'" }} axisLine={false} tickLine={false}/>
-                      <YAxis type="category" dataKey="name" width={130} tick={{ fill: TEXT_DIM, fontSize: 10, fontFamily: "'DM Mono'" }} axisLine={false} tickLine={false}/>
-                      <Tooltip content={<ChartTooltip/>} cursor={{ fill: "rgba(167,139,250,0.06)" }}/>
-                      <Bar dataKey="value" fill={VIOLET} radius={[0,2,2,0]}/>
+                      <CartesianGrid
+                        strokeDasharray="2 4"
+                        stroke={BORDER}
+                        horizontal={false}
+                      />
+                      <XAxis
+                        type="number"
+                        tick={{
+                          fill: TEXT_MUT,
+                          fontSize: 9,
+                          fontFamily: "'DM Mono'",
+                        }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        type="category"
+                        dataKey="name"
+                        width={130}
+                        tick={{
+                          fill: TEXT_DIM,
+                          fontSize: 10,
+                          fontFamily: "'DM Mono'",
+                        }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip
+                        content={<ChartTooltip />}
+                        cursor={{ fill: "rgba(167,139,250,0.06)" }}
+                      />
+                      <Bar
+                        dataKey="value"
+                        fill={VIOLET}
+                        radius={[0, 2, 2, 0]}
+                      />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -589,26 +888,47 @@ export default function EDA() {
           <div className="section" style={{ animationDelay: "0.24s" }}>
             <div className="section-label">Missing Values</div>
             <div className="panel">
-              <div className="panel-bar red"/>
+              <div className="panel-bar red" />
               <div className="panel-body">
-                {missingEntries.every(([,v]) => v === 0) ? (
-                  <div style={{ fontFamily: "var(--mono)", fontSize: 12, color: ACCENT, display: "flex", alignItems: "center", gap: 8 }}>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={ACCENT} strokeWidth="2.5">
-                      <polyline points="20 6 9 17 4 12"/>
+                {missingEntries.every(([, v]) => v === 0) ? (
+                  <div
+                    style={{
+                      fontFamily: "var(--mono)",
+                      fontSize: 12,
+                      color: ACCENT,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
+                    <svg
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke={ACCENT}
+                      strokeWidth="2.5"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
                     </svg>
                     No missing values detected
                   </div>
                 ) : (
                   <div className="missing-list">
-                    {missingEntries.filter(([,v]) => v > 0).map(([col, val]) => (
-                      <div className="missing-row" key={col}>
-                        <div className="missing-col">{col}</div>
-                        <div className="missing-bar-track">
-                          <div className="missing-bar-fill" style={{ width: `${(val / maxMissing) * 100}%` }}/>
+                    {missingEntries
+                      .filter(([, v]) => v > 0)
+                      .map(([col, val]) => (
+                        <div className="missing-row" key={col}>
+                          <div className="missing-col">{col}</div>
+                          <div className="missing-bar-track">
+                            <div
+                              className="missing-bar-fill"
+                              style={{ width: `${(val / maxMissing) * 100}%` }}
+                            />
+                          </div>
+                          <div className="missing-count">{val}</div>
                         </div>
-                        <div className="missing-count">{val}</div>
-                      </div>
-                    ))}
+                      ))}
                   </div>
                 )}
               </div>
@@ -623,10 +943,19 @@ export default function EDA() {
                 {summaryColNames.map((col) => (
                   <div className="summary-col-card" key={col}>
                     <div className="summary-col-name">
-                      <svg width="9" height="9" viewBox="0 0 10 10" fill={ACCENT}><circle cx="5" cy="5" r="5"/></svg>
+                      <svg
+                        width="9"
+                        height="9"
+                        viewBox="0 0 10 10"
+                        fill={ACCENT}
+                      >
+                        <circle cx="5" cy="5" r="5" />
+                      </svg>
                       {col}
                     </div>
-                    {STAT_KEYS.filter((k) => data.summary[col]?.[k] !== undefined).map((k) => (
+                    {STAT_KEYS.filter(
+                      (k) => data.summary[col]?.[k] !== undefined,
+                    ).map((k) => (
                       <div className="summary-stat-row" key={k}>
                         <span className="summary-stat-key">{k}</span>
                         <span className="summary-stat-val">
@@ -644,12 +973,18 @@ export default function EDA() {
 
           {/* ── CTA ── */}
           <button className="cta-btn" onClick={() => navigate("/predictor")}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+            >
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
             </svg>
             Run Predictor
           </button>
-
         </div>
       </div>
     </Layout>

@@ -1,4 +1,3 @@
-import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
 import API from "../api";
@@ -59,7 +58,38 @@ const styles = `
     flex-direction: column;
     gap: 20px;
   }
+  .state-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 2px;
+    padding: 60px 40px; display: flex; flex-direction: column; align-items: center;
+    gap: 12px; text-align: center; animation: fadeUp 0.4s cubic-bezier(0.16,1,0.3,1) both;
+  }
+  .state-icon {
+    width: 48px; height: 48px; background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 2px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); margin-bottom: 4px;
+  }
+  .state-title { font-size: 15px; font-weight: 700; color: var(--text-dim); }
+  .state-sub   { font-family: var(--mono); font-size: 11px; color: var(--text-muted); }
 
+  .ghost-btn {
+    margin-top: 8px;
+    padding: 10px 24px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    background: transparent;
+    color: var(--text-dim);
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+  }
+
+  .ghost-btn:hover {
+    border-color: rgba(255,255,255,0.18);
+    color: var(--text);
+  }
   /* ── Page header ── */
   .page-header {
     animation: fadeUp 0.45s cubic-bezier(0.16,1,0.3,1) both;
@@ -395,18 +425,15 @@ const styles = `
     color: var(--text-muted);
     margin-bottom: 4px;
   }
+  
 
+  
   .empty-title {
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--text-dim);
-    letter-spacing: -0.01em;
+    font-size: 15px; font-weight: 700; color: var(--text-dim); color: "#f87171" ;
   }
 
   .empty-sub {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--text-muted);
+    font-family: var(--mono); font-size: 11px; color: var(--text-muted);
   }
 `;
 
@@ -429,7 +456,6 @@ export default function Results() {
   //  Sort by CV score
   const sorted = validResults.sort((a, b) => getScore(b[1]) - getScore(a[1]));
 
-  
   const best = sorted[0];
 
   const maxScore = best ? getScore(best[1]) : 1;
@@ -439,129 +465,158 @@ export default function Results() {
   return (
     <Layout>
       <style>{styles}</style>
-      <div style={{ padding: "40px", color: "white" }}>
-        <h1>🏆 Model Rankings</h1>
+      <div className="results-root">
+        <div className="results-wrap">
+          <h1>🏆 Model Rankings</h1>
 
-        {sorted.length === 0 ? (
-          <p>No valid models found. Try another dataset.</p>
-        ) : (
-          <>
-            {/*  BEST MODEL */}
-            <div
-              style={{
-                marginTop: "20px",
-                padding: "20px",
-                border: "1px solid #444",
-                borderRadius: "8px",
-              }}
-            >
-              <h2>Best Model: {best[0]}</h2>
-              <p>CV Score: {getScore(best[1]).toFixed(4)}</p>
+          {sorted.length === 0 ? (
+            <div className="state-card">
+              <div className="state-icon">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#f87171"
+                  strokeWidth="1.5"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+              </div>
+
+              <div className="state-title" style={{ color: "#f87171" }}>
+                No dataset loaded
+              </div>
+
+              <div className="state-sub">
+                Please upload and train a dataset first.
+              </div>
+
+              <button className="ghost-btn" onClick={() => navigate("/")}>
+                Go to Upload
+              </button>
             </div>
+          ) : (
+            <>
+              {/*  BEST MODEL */}
+              <div
+                style={{
+                  marginTop: "20px",
+                  padding: "20px",
+                  border: "1px solid #444",
+                  borderRadius: "8px",
+                }}
+              >
+                <h2>Best Model: {best[0]}</h2>
+                <p>CV Score: {getScore(best[1]).toFixed(4)}</p>
+              </div>
 
-            {/*  ALL MODELS */}
-            <div style={{ marginTop: "30px" }}>
-              {sorted.map(([model, data], i) => {
-                const score = getScore(data);
+              {/*  ALL MODELS */}
+              <div style={{ marginTop: "30px" }}>
+                {sorted.map(([model, data], i) => {
+                  const score = getScore(data);
 
-                return (
-                  <div
-                    key={model}
-                    style={{
-                      marginBottom: "15px",
-                      padding: "12px",
-                      border: "1px solid #333",
-                      borderRadius: "6px",
-                    }}
-                  >
-                    <strong>
-                      #{i + 1} {model}
-                    </strong>
-
+                  return (
                     <div
+                      key={model}
                       style={{
-                        height: "6px",
-                        background: "#222",
-                        marginTop: "6px",
+                        marginBottom: "15px",
+                        padding: "12px",
+                        border: "1px solid #333",
+                        borderRadius: "6px",
                       }}
                     >
+                      <strong>
+                        #{i + 1} {model}
+                      </strong>
+
                       <div
                         style={{
-                          width: `${relWidth(score) * 100}%`,
-                          height: "100%",
-                          background: i === 0 ? "gold" : "#4ade80",
+                          height: "6px",
+                          background: "#222",
+                          marginTop: "6px",
                         }}
-                      />
+                      >
+                        <div
+                          style={{
+                            width: `${relWidth(score) * 100}%`,
+                            height: "100%",
+                            background: i === 0 ? "gold" : "#4ade80",
+                          }}
+                        />
+                      </div>
+
+                      <div style={{ marginTop: "5px", fontSize: "12px" }}>
+                        CV: {score.toFixed(4)}
+                      </div>
                     </div>
+                  );
+                })}
+              </div>
 
-                    <div style={{ marginTop: "5px", fontSize: "12px" }}>
-                      CV: {score.toFixed(4)}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* CTAs */}
-            <div className="cta-row">
-              <button
-                className="btn-primary"
-                onClick={() => {
-                  const stored = localStorage.getItem("automl_results");
-                  if (!stored) {
-                    navigate("/");
-                  } else {
-                    navigate("/eda");
-                  }
-                }}
-              >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
+              {/* CTAs */}
+              <div className="cta-row">
+                <button
+                  className="btn-primary"
+                  onClick={() => {
+                    const stored = localStorage.getItem("automl_results");
+                    if (!stored) {
+                      navigate("/");
+                    } else {
+                      navigate("/eda");
+                    }
+                  }}
                 >
-                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-                  <polyline points="17 6 23 6 23 12" />
-                </svg>
-                Explore EDA
-              </button>
-              <button
-                className="btn-ghost"
-                onClick={async () => {
-                  // clear ALL frontend state FIRST
-                  localStorage.clear(); 
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                  >
+                    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                    <polyline points="17 6 23 6 23 12" />
+                  </svg>
+                  Explore EDA
+                </button>
+                <button
+                  className="btn-ghost"
+                  onClick={async () => {
+                    // clear ALL frontend state FIRST
+                    localStorage.clear();
 
-                  //  reset backend
-                  try {
-                    await fetch(`${API}/reset`, { method: "POST" });
-                  } catch (e) {
-                    console.error("Reset failed", e);
-                  }
+                    //  reset backend
+                    try {
+                      await fetch(`${API}/reset`, { method: "POST" });
+                    } catch (e) {
+                      console.error("Reset failed", e);
+                    }
 
-                  //  force navigation AFTER clearing
-                  navigate("/", { replace: true });
-                }}
-              >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
+                    //  force navigation AFTER clearing
+                    navigate("/", { replace: true });
+                  }}
                 >
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="17 8 12 3 7 8" />
-                  <line x1="12" y1="3" x2="12" y2="15" />
-                </svg>
-                New Dataset
-              </button>
-            </div>
-          </>
-        )}
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                  </svg>
+                  New Dataset
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </Layout>
   );

@@ -383,15 +383,11 @@ const styles = `
   }
 
   .guard-title {
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--text-dim);
+    font-size: 15px; font-weight: 700; color: var(--text-dim); 
   }
 
   .guard-sub {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--text-muted);
+    font-family: var(--mono); font-size: 11px; color: var(--text-muted);
   }
 
   .ghost-btn {
@@ -438,7 +434,7 @@ export default function Predictor() {
         <div className="pred-root">
           <div className="pred-wrap">
             <div className="guard-card">
-              <div className="guard-icon">
+              <div className="guard-icon" style={{ color: "#f87171" }}>
                 <svg
                   width="20"
                   height="20"
@@ -452,7 +448,7 @@ export default function Predictor() {
                   <line x1="12" y1="16" x2="12.01" y2="16" />
                 </svg>
               </div>
-              <div className="guard-title">No session data found</div>
+              <div className="guard-title" style={{ color: "#f87171" }}>No session data found</div>
               <div className="guard-sub">
                 Train a model first before running predictions.
               </div>
@@ -530,7 +526,7 @@ export default function Predictor() {
               <div className="section-label">Feature Inputs</div>
 
               {error && (
-                <div className="error-box">
+                <div className="error-box" >
                   <svg
                     width="13"
                     height="13"
@@ -582,7 +578,7 @@ export default function Predictor() {
               <div className="result-bar" />
               <div className="result-body">
                 <div className="result-left">
-                  <div className="result-icon">
+                  <div className="result-icon" >
                     <svg
                       width="22"
                       height="22"
