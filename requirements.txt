@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+pydantic
+python-multipart
+
+numpy
+pandas
+scikit-learn
+matplotlib
+seaborn
+
+joblib
+
+
+python-dotenv
