@@ -250,7 +250,8 @@ const styles = `
 `;
 
 const NAV_ITEMS = [
-  { label: "Upload",    path: "/",          step: "01" },
+  { label: "Home",      path: "/",          step: "00" },
+  { label: "Upload",    path: "/upload",    step: "01" },
   { label: "Results",   path: "/results",   step: "02" },
   { label: "EDA",       path: "/eda",       step: "03" },
   { label: "Predictor", path: "/predictor", step: "04" },
