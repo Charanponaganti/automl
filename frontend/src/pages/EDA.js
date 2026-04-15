@@ -314,6 +314,22 @@ function PieLegend({ payload }) {
   );
 }
 
+function ExpandOverlay({ title, children, onClose }) {
+  return (
+    <div className="overlay-backdrop" onClick={onClose}>
+      <div className="overlay-panel" onClick={(e) => e.stopPropagation()}>
+        <div className="overlay-header">
+          <div className="overlay-title">{title}</div>
+          <button className="overlay-close" onClick={onClose}>
+            ×
+          </button>
+        </div>
+        <div className="overlay-content">{children}</div>
+      </div>
+    </div>
+  );
+}
+
 // ── Model scores panel ─────────────────────────────────────────────────────────
 function ModelScores({ scores, bestModel }) {
   if (!scores || Object.keys(scores).length === 0) return null;
@@ -428,7 +444,7 @@ function OutlierPanel({ outliers, numRows }) {
   const totalOutliers = Object.values(outliers).reduce((a, b) => a + b, 0);
 
   return (
-    <div className="section" style={{ animationDelay: "0.13s" }}>
+    <div className="section" id="outlier-detection" style={{ animationDelay: "0.13s" }}>
       <div className="section-label">
         Outlier Detection
         {totalOutliers > 0 && (
@@ -494,12 +510,373 @@ function OutlierPanel({ outliers, numRows }) {
   );
 }
 
+function RedundantFeaturesPanel({ features }) {
+  if (!features || features.length === 0) return null;
+  return (
+    <div className="section" id="redundant-features" style={{ animationDelay: "0.14s" }}>
+      <div className="section-label">Redundant Features</div>
+      <div className="panel">
+        <div className="panel-bar" />
+        <div className="panel-body">
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+            {features.map((feature) => (
+              <span key={feature} className="col-pill">
+                {feature}
+              </span>
+            ))}
+          </div>
+          <div
+            style={{
+              marginTop: 12,
+              color: TEXT_MUT,
+              fontFamily: "var(--mono)",
+              fontSize: 11,
+            }}
+          >
+            These high-cardinality features are excluded from training and EDA.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BoxPlotPanel({ boxPlots, onCardExpand }) {
+  if (!boxPlots || Object.keys(boxPlots).length === 0) return null;
+  const cols = Object.entries(boxPlots);
+  return (
+    <div className="section enlargeable-section" id="box-plots" style={{ animationDelay: "0.15s" }}>
+      <div className="section-label">Box Plots · Outlier Summary</div>
+      <div className="boxplot-grid">
+        {cols.map(([col, stats]) => {
+          const range = stats.max - stats.min || 1;
+          const q1Pos = ((stats.q1 - stats.min) / range) * 100;
+          const q3Pos = ((stats.q3 - stats.min) / range) * 100;
+          const medianPos = ((stats.median - stats.min) / range) * 100;
+          const minPos = 0;
+          const maxPos = 100;
+
+          return (
+            <div
+              className="boxplot-card clickable"
+              key={col}
+              onClick={() =>
+                onCardExpand?.(
+                  `Box Plot • ${col}`,
+                  <div style={{ width: "100%", minHeight: 420 }}>
+                    <div className="boxplot-grid">
+                      <div className="boxplot-card">
+                        <div className="chart-col-name">
+                          <div className="chart-col-dot" />
+                          {col}
+                        </div>
+                        <div className="boxplot-track">
+                          <div
+                            className="boxplot-whisker"
+                            style={{
+                              left: `${stats.lower_whisker === stats.min ? minPos : ((stats.lower_whisker - stats.min) / range) * 100}%`,
+                              width: `${stats.lower_whisker === stats.min ? q1Pos : q1Pos - ((stats.lower_whisker - stats.min) / range) * 100}%`,
+                            }}
+                          />
+                          <div
+                            className="boxplot-whisker"
+                            style={{
+                              left: `${q3Pos}%`,
+                              width: `${stats.upper_whisker === stats.max ? maxPos - q3Pos : ((stats.upper_whisker - stats.min) / range) * 100 - q3Pos}%`,
+                            }}
+                          />
+                          <div
+                            className="boxplot-box"
+                            style={{ left: `${q1Pos}%`, width: `${Math.max(q3Pos - q1Pos, 1)}%` }}
+                          />
+                          <div className="boxplot-median" style={{ left: `${medianPos}%` }} />
+                          {stats.outliers.map((value, index) => {
+                            const pointPos = ((value - stats.min) / range) * 100;
+                            return (
+                              <div
+                                key={`${col}-outlier-${index}`}
+                                className="boxplot-outlier"
+                                style={{ left: `${Math.min(Math.max(pointPos, 0), 100)}%` }}
+                              />
+                            );
+                          })}
+                        </div>
+                        <div className="boxplot-meta">
+                          <span>min {stats.min.toFixed(2)}</span>
+                          <span>q1 {stats.q1.toFixed(2)}</span>
+                          <span>median {stats.median.toFixed(2)}</span>
+                          <span>q3 {stats.q3.toFixed(2)}</span>
+                          <span>max {stats.max.toFixed(2)}</span>
+                        </div>
+                        {stats.outlier_count > 0 && (
+                          <div className="boxplot-outlier-summary">
+                            {stats.outlier_count} outlier{stats.outlier_count !== 1 ? "s" : ""}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>,
+                )
+              }
+            >
+              <div className="chart-col-name">
+                <div className="chart-col-dot" />
+                {col}
+              </div>
+              <div className="boxplot-track">
+                <div
+                  className="boxplot-whisker"
+                  style={{
+                    left: `${stats.lower_whisker === stats.min ? minPos : ((stats.lower_whisker - stats.min) / range) * 100}%`,
+                    width: `${stats.lower_whisker === stats.min ? q1Pos : q1Pos - ((stats.lower_whisker - stats.min) / range) * 100}%`,
+                  }}
+                />
+                <div
+                  className="boxplot-whisker"
+                  style={{
+                    left: `${q3Pos}%`,
+                    width: `${stats.upper_whisker === stats.max ? maxPos - q3Pos : ((stats.upper_whisker - stats.min) / range) * 100 - q3Pos}%`,
+                  }}
+                />
+                <div
+                  className="boxplot-box"
+                  style={{ left: `${q1Pos}%`, width: `${Math.max(q3Pos - q1Pos, 1)}%` }}
+                />
+                <div className="boxplot-median" style={{ left: `${medianPos}%` }} />
+                {stats.outliers.map((value, index) => {
+                  const pointPos = ((value - stats.min) / range) * 100;
+                  return (
+                    <div
+                      key={`${col}-outlier-${index}`}
+                      className="boxplot-outlier"
+                      style={{ left: `${Math.min(Math.max(pointPos, 0), 100)}%` }}
+                    />
+                  );
+                })}
+              </div>
+              <div className="boxplot-meta">
+                <span>min {stats.min.toFixed(2)}</span>
+                <span>q1 {stats.q1.toFixed(2)}</span>
+                <span>median {stats.median.toFixed(2)}</span>
+                <span>q3 {stats.q3.toFixed(2)}</span>
+                <span>max {stats.max.toFixed(2)}</span>
+              </div>
+              {stats.outlier_count > 0 && (
+                <div className="boxplot-outlier-summary">
+                  {stats.outlier_count} outlier{stats.outlier_count !== 1 ? "s" : ""}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function TargetDistributionPanel({ targetColumn, distribution, targetType, onCardExpand }) {
+  if (!targetColumn || !distribution || Object.keys(distribution).length === 0) return null;
+  const chartData = Object.entries(distribution).map(([name, value]) => ({ name, value }));
+  const handleExpand = () =>
+    onCardExpand?.(
+      `Target Distribution · ${targetColumn}`,
+      <div style={{ width: "100%", minHeight: 420 }}>
+        <ResponsiveContainer width="100%" height={380}>
+          <PieChart>
+            <Pie
+              data={chartData}
+              dataKey="value"
+              nameKey="name"
+              outerRadius={120}
+              innerRadius={60}
+              paddingAngle={3}
+            >
+              {chartData.map((_, i) => (
+                <Cell
+                  key={i}
+                  fill={PIE_COLORS[i % PIE_COLORS.length]}
+                  stroke="none"
+                />
+              ))}
+            </Pie>
+            <Tooltip content={<ChartTooltip />} />
+            <Legend content={<PieLegend />} />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>,
+    );
+  return (
+    <div
+      className="section enlargeable-section"
+      id="target-distribution"
+      style={{ animationDelay: "0.16s" }}
+    >
+      <div className="section-label">
+        Target Distribution · {targetColumn}
+        <span style={{ color: TEXT_MUT, fontSize: 10, letterSpacing: '0.15em' }}>
+          {targetType === 'classification' ? 'labels' : 'numeric'}
+        </span>
+      </div>
+      <div className="chart-grid">
+        <div className="chart-card clickable" onClick={handleExpand}>
+          <div className="chart-card-bar violet" />
+          <div className="chart-card-body">
+            <div className="chart-col-name">
+              <div className="chart-col-dot violet" />
+              {targetColumn}
+            </div>
+            <ResponsiveContainer width="100%" height={260}>
+              <PieChart>
+                <Pie
+                  data={chartData}
+                  dataKey="value"
+                  nameKey="name"
+                  outerRadius={90}
+                  innerRadius={40}
+                  paddingAngle={2}
+                >
+                  {chartData.map((_, i) => (
+                    <Cell
+                      key={i}
+                      fill={PIE_COLORS[i % PIE_COLORS.length]}
+                      stroke="none"
+                    />
+                  ))}
+                </Pie>
+                <Tooltip content={<ChartTooltip />} />
+                <Legend content={<PieLegend />} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CategoricalTargetPanel({ targetColumn, distributions, onCardExpand }) {
+  if (!targetColumn || !distributions || Object.keys(distributions).length === 0) return null;
+  return (
+    <div
+      className="section enlargeable-section"
+      id="categorical-vs-target"
+      style={{ animationDelay: "0.17s" }}
+    >
+      <div className="section-label">Categorical Features vs Target</div>
+      <div className="chart-grid">
+        {Object.entries(distributions).map(([feature, info]) => (
+          <div
+            className="chart-card clickable"
+            key={feature}
+            onClick={() =>
+              onCardExpand?.(
+                `Target vs ${feature}`,
+                <div style={{ width: "100%", minHeight: 420 }}>
+                  <ResponsiveContainer width="100%" height={360}>
+                    <BarChart
+                      data={info.data}
+                      margin={{ top: 0, right: 0, bottom: 0, left: -10 }}
+                    >
+                      <CartesianGrid
+                        strokeDasharray="2 4"
+                        stroke={BORDER}
+                        vertical={false}
+                      />
+                      <XAxis
+                        dataKey="category"
+                        tick={{
+                          fill: TEXT_MUT,
+                          fontSize: 9,
+                          fontFamily: "'DM Mono'",
+                        }}
+                        axisLine={false}
+                        tickLine={false}
+                        interval={0}
+                        angle={-25}
+                        textAnchor="end"
+                        height={60}
+                      />
+                      <YAxis
+                        tick={{
+                          fill: TEXT_MUT,
+                          fontSize: 9,
+                          fontFamily: "'DM Mono'",
+                        }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip content={<ChartTooltip />} />
+                      <Legend content={<PieLegend />} />
+                      {info.target_labels.map((label, labelIndex) => (
+                        <Bar
+                          key={label}
+                          dataKey={label}
+                          stackId="target"
+                          fill={PIE_COLORS[labelIndex % PIE_COLORS.length]}
+                          radius={[2, 2, 0, 0]}
+                        />
+                      ))}
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>,
+              )
+            }
+          >
+            <div className="chart-card-bar gold" />
+            <div className="chart-card-body">
+              <div className="chart-col-name">
+                <div className="chart-col-dot gold" />
+                {feature}
+              </div>
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart
+                  data={info.data}
+                  margin={{ top: 0, right: 0, bottom: 0, left: -10 }}
+                >
+                  <CartesianGrid strokeDasharray="2 4" stroke={BORDER} vertical={false} />
+                  <XAxis
+                    dataKey="category"
+                    tick={{ fill: TEXT_MUT, fontSize: 9, fontFamily: "'DM Mono'" }}
+                    axisLine={false}
+                    tickLine={false}
+                    interval={0}
+                    angle={-25}
+                    textAnchor="end"
+                    height={60}
+                  />
+                  <YAxis
+                    tick={{ fill: TEXT_MUT, fontSize: 9, fontFamily: "'DM Mono'" }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Legend content={<PieLegend />} />
+                  {info.target_labels.map((label, labelIndex) => (
+                    <Bar
+                      key={label}
+                      dataKey={label}
+                      stackId="target"
+                      fill={PIE_COLORS[labelIndex % PIE_COLORS.length]}
+                      radius={[2, 2, 0, 0]}
+                    />
+                  ))}
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Scatter Plots for top correlated pairs ────────────────────────────────────
 function ScatterPairs({
   correlation,
   scatterData,
   selectedPair,
   onSelectPair,
+  onCardExpand,
 }) {
   if (!correlation || Object.keys(correlation).length === 0) return null;
 
@@ -520,8 +897,105 @@ function ScatterPairs({
   if (topPairs.length === 0) return null;
 
   return (
-    <div className="section" style={{ animationDelay: "0.16s" }}>
-      <div className="section-label">Scatter Plots · Top Correlated Pairs</div>
+    <div className="section enlargeable-section" id="scatter-plots" style={{ animationDelay: "0.16s" }}>
+      <div className="section-label">
+        Scatter Plots · Top Correlated Pairs
+        <button
+          type="button"
+          className="expand-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            onCardExpand?.(
+              "Scatter Plots",
+              <div style={{ width: "100%", minHeight: 520 }}>
+                <div className="chart-grid">
+                  {topPairs.map(({ colA, colB, corr }) => {
+                    const key = [colA, colB].sort().join("__");
+                    const corrAbs = Math.abs(corr);
+                    const chartPoints =
+                      scatterData?.[`${colA}__${colB}`] ||
+                      scatterData?.[`${colB}__${colA}`] ||
+                      [];
+                    return (
+                      <div className="chart-card" key={key}>
+                        <div className={`chart-card-bar ${corrAbs > 0.7 ? (corr > 0 ? "" : "red") : "gold"}`} />
+                        <div className="chart-card-body">
+                          <div className="scatter-pair-header">
+                            <div className="scatter-pair-cols">
+                              <div className={`chart-col-dot ${corrAbs > 0.7 ? (corr > 0 ? "" : "red") : "gold"}`} />
+                              <span>{colA}</span>
+                              <span style={{ color: TEXT_MUT, fontSize: 9 }}>vs</span>
+                              <span>{colB}</span>
+                            </div>
+                            <span className="scatter-corr-badge" style={{ color: corrAbs > 0.7 ? (corr > 0 ? ACCENT : RED) : TEXT_DIM, borderColor: corrAbs > 0.7 ? (corr > 0 ? "rgba(99,210,179,0.4)" : "rgba(248,113,113,0.4)") : "rgba(255,255,255,0.1)" }}>
+                              r = {corr.toFixed(3)}
+                            </span>
+                          </div>
+                          {chartPoints.length > 0 ? (
+                            <ResponsiveContainer width="100%" height={260}>
+                              <ScatterChart margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
+                                <CartesianGrid strokeDasharray="2 4" stroke={BORDER} />
+                                <XAxis
+                                  dataKey="x"
+                                  type="number"
+                                  name={colA}
+                                  tick={{ fill: TEXT_MUT, fontSize: 9, fontFamily: "'DM Mono'" }}
+                                  axisLine={false}
+                                  tickLine={false}
+                                />
+                                <YAxis
+                                  dataKey="y"
+                                  type="number"
+                                  name={colB}
+                                  tick={{ fill: TEXT_MUT, fontSize: 9, fontFamily: "'DM Mono'" }}
+                                  axisLine={false}
+                                  tickLine={false}
+                                />
+                                <ZAxis range={[18, 18]} />
+                                <Tooltip
+                                  cursor={{ strokeDasharray: "3 3", stroke: BORDER }}
+                                  content={({ active, payload }) => {
+                                    if (!active || !payload?.length) return null;
+                                    const d = payload[0]?.payload;
+                                    return (
+                                      <div style={{ background: "#111318", border: "1px solid rgba(99,210,179,0.25)", borderRadius: 2, padding: "8px 14px", fontFamily: "'DM Mono',monospace", fontSize: 11 }}>
+                                        <div style={{ color: TEXT_MUT, fontSize: 10, marginBottom: 3 }}>
+                                          {colA}: <span style={{ color: ACCENT }}>{d?.x?.toFixed(3)}</span>
+                                        </div>
+                                        <div style={{ color: TEXT_MUT, fontSize: 10 }}>
+                                          {colB}: <span style={{ color: VIOLET }}>{d?.y?.toFixed(3)}</span>
+                                        </div>
+                                      </div>
+                                    );
+                                  }}
+                                />
+                                <Scatter
+                                  data={chartPoints}
+                                  fill={corrAbs > 0.7 ? (corr > 0 ? ACCENT : RED) : GOLD}
+                                  fillOpacity={0.45}
+                                  line={{ strokeWidth: 0.5 }}
+                                  shape="circle"
+                                  size={4}
+                                />
+                              </ScatterChart>
+                            </ResponsiveContainer>
+                          ) : (
+                            <div style={{ height: 180, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--mono)", fontSize: 10, color: TEXT_MUT }}>
+                              No sample data available
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>,
+            );
+          }}
+        >
+          Expand
+        </button>
+      </div>
       <div className="chart-grid">
         {topPairs.map(({ colA, colB, corr }) => {
           const key = [colA, colB].sort().join("__");
@@ -550,10 +1024,86 @@ function ScatterPairs({
 
           return (
             <div
-              className="chart-card"
+              className="chart-card clickable"
               key={key}
               style={isSelected ? { borderColor: "rgba(99,210,179,0.3)" } : {}}
-              onClick={() => onSelectPair(isSelected ? null : key)}
+              onClick={() =>
+                onCardExpand?.(
+                  `Scatter • ${colA} vs ${colB}`,
+                  <div style={{ width: "100%", minHeight: 420 }}>
+                    <ResponsiveContainer width="100%" height={360}>
+                      <ScatterChart margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
+                        <CartesianGrid strokeDasharray="2 4" stroke={BORDER} />
+                        <XAxis
+                          dataKey="x"
+                          type="number"
+                          name={colA}
+                          tick={{
+                            fill: TEXT_MUT,
+                            fontSize: 9,
+                            fontFamily: "'DM Mono'",
+                          }}
+                          axisLine={false}
+                          tickLine={false}
+                        />
+                        <YAxis
+                          dataKey="y"
+                          type="number"
+                          name={colB}
+                          tick={{
+                            fill: TEXT_MUT,
+                            fontSize: 9,
+                            fontFamily: "'DM Mono'",
+                          }}
+                          axisLine={false}
+                          tickLine={false}
+                        />
+                        <ZAxis range={[18, 18]} />
+                        <Tooltip
+                          cursor={{ strokeDasharray: "3 3", stroke: BORDER }}
+                          content={({ active, payload }) => {
+                            if (!active || !payload?.length) return null;
+                            const d = payload[0]?.payload;
+                            return (
+                              <div
+                                style={{
+                                  background: "#111318",
+                                  border: "1px solid rgba(99,210,179,0.25)",
+                                  borderRadius: 2,
+                                  padding: "8px 14px",
+                                  fontFamily: "'DM Mono',monospace",
+                                  fontSize: 11,
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    color: TEXT_MUT,
+                                    fontSize: 10,
+                                    marginBottom: 3,
+                                  }}
+                                >
+                                  {colA}: <span style={{ color: ACCENT }}>{d?.x?.toFixed(3)}</span>
+                                </div>
+                                <div style={{ color: TEXT_MUT, fontSize: 10 }}>
+                                  {colB}: <span style={{ color: VIOLET }}>{d?.y?.toFixed(3)}</span>
+                                </div>
+                              </div>
+                            );
+                          }}
+                        />
+                        <Scatter
+                          data={chartPoints}
+                          fill={corrAbs > 0.7 ? (corr > 0 ? ACCENT : RED) : GOLD}
+                          fillOpacity={0.45}
+                          line={{ strokeWidth: 0.5 }}
+                          shape="circle"
+                          size={4}
+                        />
+                      </ScatterChart>
+                    </ResponsiveContainer>
+                  </div>,
+                )
+              }
             >
               <div
                 className={`chart-card-bar ${corrAbs > 0.7 ? (corr > 0 ? "" : "red") : "gold"}`}
@@ -672,7 +1222,10 @@ function ScatterPairs({
                       <Scatter
                         data={chartPoints}
                         fill={corrAbs > 0.7 ? (corr > 0 ? ACCENT : RED) : GOLD}
-                        fillOpacity={0.55}
+                        fillOpacity={0.45}
+                        line={{ strokeWidth: 0.5 }}
+                        shape="circle"
+                        size={4}
                       />
                     </ScatterChart>
                   </ResponsiveContainer>
@@ -700,6 +1253,466 @@ function ScatterPairs({
   );
 }
 
+function HistogramPanel({ histograms, onCardExpand }) {
+  if (!histograms || Object.keys(histograms).length === 0) return null;
+  return (
+    <div className="section enlargeable-section" id="histograms" style={{ animationDelay: "0.17s" }}>
+      <div className="section-label">Histograms</div>
+      <div className="chart-grid">
+        {Object.entries(histograms).map(([col, values]) => (
+          <div
+            className="chart-card clickable"
+            key={col}
+            onClick={() =>
+              onCardExpand?.(
+                `Histogram • ${col}`,
+                <div style={{ width: "100%", minHeight: 420 }}>
+                  <ResponsiveContainer width="100%" height={360}>
+                    <BarChart
+                      data={values}
+                      margin={{ top: 0, right: 0, bottom: 0, left: -20 }}
+                    >
+                      <CartesianGrid
+                        strokeDasharray="2 4"
+                        stroke={BORDER}
+                        vertical={false}
+                      />
+                      <XAxis
+                        dataKey="bin"
+                        tick={{
+                          fill: TEXT_MUT,
+                          fontSize: 9,
+                          fontFamily: "'DM Mono'",
+                        }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        tick={{
+                          fill: TEXT_MUT,
+                          fontSize: 9,
+                          fontFamily: "'DM Mono'",
+                        }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip
+                        content={<ChartTooltip />}
+                        cursor={{ fill: "rgba(99,210,179,0.06)" }}
+                      />
+                      <Bar
+                        dataKey="count"
+                        fill={ACCENT}
+                        radius={[2, 2, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>,
+              )
+            }
+          >
+            <div className="chart-card-bar" />
+            <div className="chart-card-body">
+              <div className="chart-col-name">
+                <div className="chart-col-dot" />
+                {col}
+              </div>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart
+                  data={values}
+                  margin={{ top: 0, right: 0, bottom: 0, left: -20 }}
+                >
+                  <CartesianGrid
+                    strokeDasharray="2 4"
+                    stroke={BORDER}
+                    vertical={false}
+                  />
+                  <XAxis
+                    dataKey="bin"
+                    tick={{
+                      fill: TEXT_MUT,
+                      fontSize: 9,
+                      fontFamily: "'DM Mono'",
+                    }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{
+                      fill: TEXT_MUT,
+                      fontSize: 9,
+                      fontFamily: "'DM Mono'",
+                    }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    content={<ChartTooltip />}
+                    cursor={{ fill: "rgba(99,210,179,0.06)" }}
+                  />
+                  <Bar
+                    dataKey="count"
+                    fill={ACCENT}
+                    radius={[2, 2, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CategoricalDistributionPanel({ categorical, onCardExpand }) {
+  if (!categorical || Object.keys(categorical).length === 0) return null;
+  return (
+    <div className="section enlargeable-section" id="categorical-distribution" style={{ animationDelay: "0.19s" }}>
+      <div className="section-label">Categorical Distribution</div>
+      <div className="chart-grid">
+        {Object.entries(categorical).map(([col, values]) => {
+          const chartData = buildPieChartData(values, 6);
+          return (
+            <div
+              className="chart-card clickable"
+              key={col}
+              onClick={() =>
+                onCardExpand?.(
+                  `Category Distribution • ${col}`,
+                  <div style={{ width: "100%", minHeight: 420 }}>
+                    <ResponsiveContainer width="100%" height={360}>
+                      <PieChart>
+                        <Pie
+                          data={chartData}
+                          dataKey="value"
+                          nameKey="name"
+                          outerRadius={110}
+                          innerRadius={50}
+                          paddingAngle={2}
+                        >
+                          {chartData.map((_, i) => (
+                            <Cell
+                              key={i}
+                              fill={PIE_COLORS[i % PIE_COLORS.length]}
+                              stroke="none"
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<ChartTooltip />} />
+                        <Legend content={<PieLegend />} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>,
+                )
+              }
+            >
+              <div className="chart-card-bar violet" />
+              <div className="chart-card-body">
+                <div className="chart-col-name">
+                  <div className="chart-col-dot violet" />
+                  {col}
+                </div>
+                <ResponsiveContainer width="100%" height={220}>
+                  <PieChart>
+                    <Pie
+                      data={chartData}
+                      dataKey="value"
+                      nameKey="name"
+                      outerRadius={80}
+                      innerRadius={36}
+                      paddingAngle={2}
+                    >
+                      {chartData.map((_, i) => (
+                        <Cell
+                          key={i}
+                          fill={PIE_COLORS[i % PIE_COLORS.length]}
+                          stroke="none"
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<ChartTooltip />} />
+                    <Legend content={<PieLegend />} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function CorrelationMatrixPanel({ correlation, selectedPair, onSelectPair, onCardExpand }) {
+  if (!correlation || Object.keys(correlation).length === 0) return null;
+  return (
+    <div className="section enlargeable-section" id="correlation-matrix" style={{ animationDelay: "0.21s" }}>
+      <div className="section-label">
+        Correlation Matrix
+        <button
+          type="button"
+          className="expand-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            onCardExpand?.(
+              "Correlation Matrix",
+              <div style={{ width: "100%", minHeight: 520 }}>
+                <div className="panel">
+                  <div className="panel-bar gold" />
+                  <div className="panel-body">
+                    <div className="corr-scroll">
+                      <table className="corr-table">
+                        <thead>
+                          <tr>
+                            <th />
+                            {Object.keys(correlation).map((col) => (
+                              <th key={col}>{col}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {Object.entries(correlation).map(([row, cols]) => (
+                            <tr key={row}>
+                              <th>{row}</th>
+                              {Object.entries(cols).map(([col, val], i) => (
+                                <td
+                                  key={i}
+                                  style={{
+                                    background: corrColor(val),
+                                    color: Math.abs(val) > 0.5 ? "#e8eaf0" : TEXT_DIM,
+                                  }}
+                                >
+                                  {val.toFixed(2)}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>,
+            );
+          }}
+        >
+          Expand
+        </button>
+      </div>
+      <div className="panel">
+        <div className="panel-bar gold" />
+        <div className="panel-body">
+          <div className="corr-scroll">
+            <table className="corr-table">
+              <thead>
+                <tr>
+                  <th />
+                  {Object.keys(correlation).map((col) => (
+                    <th key={col}>{col}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(correlation).map(([row, cols]) => (
+                  <tr key={row}>
+                    <th>{row}</th>
+                    {Object.entries(cols).map(([col, val], i) => {
+                      const pairKey = [row, col].sort().join("__");
+                      const isSelected = selectedPair === pairKey;
+                      return (
+                        <td
+                          key={i}
+                          className={isSelected ? "selected" : ""}
+                          style={{
+                            background: corrColor(val),
+                            color:
+                              Math.abs(val) > 0.5
+                                ? "#e8eaf0"
+                                : TEXT_DIM,
+                            cursor: row !== col ? "pointer" : "default",
+                          }}
+                          onClick={() => {
+                            if (row === col) return;
+                            onSelectPair(isSelected ? null : pairKey);
+                            onCardExpand?.(
+                              `Corr ${row} vs ${col}`,
+                              <div style={{ width: "100%", minHeight: 420 }}>
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    gap: 16,
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      fontFamily: "var(--mono)",
+                                      fontSize: 11,
+                                      color: TEXT_MUT,
+                                    }}
+                                  >
+                                    Correlation for {row} vs {col}: {val.toFixed(3)}
+                                  </div>
+                                  <div className="panel">
+                                    <div className="panel-bar gold" />
+                                    <div className="panel-body">
+                                      <div
+                                        style={{
+                                          display: "grid",
+                                          gridTemplateColumns: "1fr 1fr",
+                                          gap: 12,
+                                        }}
+                                      >
+                                        <div>
+                                          <div className="summary-stat-key">Row</div>
+                                          <div>{row}</div>
+                                        </div>
+                                        <div>
+                                          <div className="summary-stat-key">Column</div>
+                                          <div>{col}</div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>,
+                            );
+                          }}
+                        >
+                          {val.toFixed(2)}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FeatureImportancePanel({ featureImportance, onCardExpand }) {
+  if (!featureImportance || featureImportance.length === 0) return null;
+  return (
+    <div className="section enlargeable-section" id="feature-importance" style={{ animationDelay: "0.25s" }}>
+      <div className="section-label">Feature Importance</div>
+      <div
+        className="panel clickable"
+        onClick={() =>
+          onCardExpand?.(
+            "Feature Importance",
+            <div style={{ width: "100%", minHeight: 420 }}>
+              <ResponsiveContainer
+                width="100%"
+                height={Math.max(320, featureImportance.length * 28)}
+              >
+                <BarChart
+                  layout="vertical"
+                  data={featureImportance}
+                  margin={{ top: 0, right: 20, bottom: 0, left: 20 }}
+                >
+                  <CartesianGrid
+                    strokeDasharray="2 4"
+                    stroke={BORDER}
+                    horizontal={false}
+                  />
+                  <XAxis
+                    type="number"
+                    tick={{
+                      fill: TEXT_MUT,
+                      fontSize: 9,
+                      fontFamily: "'DM Mono'",
+                    }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    width={160}
+                    tick={{
+                      fill: TEXT_DIM,
+                      fontSize: 10,
+                      fontFamily: "'DM Mono'",
+                    }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    content={<ChartTooltip />}
+                    cursor={{ fill: "rgba(167,139,250,0.06)" }}
+                  />
+                  <Bar
+                    dataKey="value"
+                    fill={VIOLET}
+                    radius={[0, 2, 2, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>,
+          )
+        }
+      >
+        <div className="panel-bar violet" />
+        <div className="panel-bar violet" />
+        <div className="panel-body">
+          <ResponsiveContainer
+            width="100%"
+            height={Math.max(200, featureImportance.length * 28)}
+          >
+            <BarChart
+              layout="vertical"
+              data={featureImportance}
+              margin={{ top: 0, right: 20, bottom: 0, left: 20 }}
+            >
+              <CartesianGrid
+                strokeDasharray="2 4"
+                stroke={BORDER}
+                horizontal={false}
+              />
+              <XAxis
+                type="number"
+                tick={{
+                  fill: TEXT_MUT,
+                  fontSize: 9,
+                  fontFamily: "'DM Mono'",
+                }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                type="category"
+                dataKey="name"
+                width={130}
+                tick={{
+                  fill: TEXT_DIM,
+                  fontSize: 10,
+                  fontFamily: "'DM Mono'",
+                }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip
+                content={<ChartTooltip />}
+                cursor={{ fill: "rgba(167,139,250,0.06)" }}
+              />
+              <Bar
+                dataKey="value"
+                fill={VIOLET}
+                radius={[0, 2, 2, 0]}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── ML Readiness Panel ────────────────────────────────────────────────────────
 function MLReadinessPanel({ data }) {
   const { issues, warnings, ok } = useMemo(
@@ -710,7 +1723,7 @@ function MLReadinessPanel({ data }) {
   const scoreColor = score >= 80 ? ACCENT : score >= 50 ? GOLD : RED;
 
   return (
-    <div className="section" style={{ animationDelay: "0.22s" }}>
+    <div className="section" id="ml-readiness" style={{ animationDelay: "0.22s" }}>
       <div className="section-label">
         ML Readiness
         <span
@@ -947,8 +1960,88 @@ function MLReadinessPanel({ data }) {
   );
 }
 
+const SidebarNav = ({ sections, activeSection, sidebarOpen, setSidebarOpen }) => {
+  return (
+    <>
+      {sidebarOpen && (
+        <div
+          className="eda-overlay"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      <aside className={`eda-sidebar ${sidebarOpen ? "open" : ""}`}>
+        <div className="eda-sidebar-header">
+          <span>Navigation</span>
+          <button
+            className="eda-sidebar-close"
+            onClick={() => setSidebarOpen(false)}
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="eda-sidebar-body">
+          {sections.map((section) => (
+            <button
+              key={section.id}
+              className={`eda-sidebar-link ${activeSection === section.id ? "active" : ""
+                }`}
+              onClick={() => {
+                const el = document.getElementById(section.id);
+                if (el) {
+                  el.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+                setSidebarOpen(false);
+              }}
+            >
+              {section.label}
+            </button>
+          ))}
+        </div>
+      </aside>
+    </>
+  );
+};
+
+
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function EDA() {
+  const navSections = useMemo(
+    () => [
+      { id: "sample-data", label: "Sample Data" },
+      { id: "missing-values", label: "Missing Values" },
+      { id: "summary-statistics", label: "Summary" },
+      { id: "histograms", label: "Histograms" },
+      { id: "scatter-plots", label: "Scatter" },
+      { id: "box-plots", label: "Box Plots" },
+      { id: "outlier-detection", label: "Outliers" },
+    ],
+    [],
+  );
+  useEffect(() => {
+    const handleScroll = () => {
+      const offset = window.scrollY + window.innerHeight * 0.3;
+
+      let current = navSections[0]?.id;
+
+      for (let section of navSections) {
+        const el = document.getElementById(section.id);
+        if (el && el.offsetTop <= offset) {
+          current = section.id;
+        }
+      }
+
+      setActiveSection(current);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [navSections]);
+
+
   const [data, setData] = useState(null);
   const [trainRes, setTrainRes] = useState(null);
   const [error, setError] = useState(null);
@@ -960,6 +2053,23 @@ export default function EDA() {
 
   // Scatter pair selection
   const [selectedPair, setSelectedPair] = useState(null);
+  const [expandedSection, setExpandedSection] = useState(null);
+  const [expandedChart, setExpandedChart] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState("sample-data");
+
+  useEffect(() => {
+    if (window.innerWidth > 1120) {
+      setSidebarOpen(true);
+    }
+  }, []);
+
+  const openExpanded = (sectionId) => setExpandedSection(sectionId);
+  const openChart = (title, content) => setExpandedChart({ title, content });
+  const closeExpanded = () => {
+    setExpandedSection(null);
+    setExpandedChart(null);
+  };
 
   useEffect(() => {
     const stored = localStorage.getItem("automl_results");
@@ -973,14 +2083,14 @@ export default function EDA() {
       .catch((err) =>
         setError(err.response?.data?.detail || "Failed to load EDA data."),
       );
-  }, []);
+  }, [navSections]);
 
   useEffect(() => {
     axios
       .get(`${API}/model_info`)
       .then((res) => setTrainRes(res.data))
-      .catch(() => {});
-  }, []);
+      .catch(() => { });
+  }, [navSections]);
 
   // Filtered columns
   const filteredCols = useMemo(() => {
@@ -1021,6 +2131,186 @@ export default function EDA() {
       .slice(0, 10)
       .map(([name, value]) => ({ name, value }));
   }, [data?.importance, categoricalCols]);
+
+  // const navSections = useMemo(
+  //   () => [
+  //     { id: "sample-data", label: "Sample Data" },
+  //     { id: "target-distribution", label: "Target Distribution" },
+  //     { id: "categorical-vs-target", label: "Categorical vs Target" },
+  //     { id: "outlier-detection", label: "Outlier Detection" },
+  //     { id: "box-plots", label: "Box Plots" },
+  //     { id: "histograms", label: "Histograms" },
+  //     { id: "categorical-distribution", label: "Categorical Distribution" },
+  //     { id: "correlation-matrix", label: "Correlation Matrix" },
+  //     { id: "scatter-plots", label: "Scatter Plots" },
+  //     { id: "feature-importance", label: "Feature Importance" },
+  //     { id: "redundant-features", label: "Redundant Features" },
+  //     { id: "missing-values", label: "Missing Values" },
+  //     { id: "ml-readiness", label: "ML Readiness" },
+  //     { id: "summary-statistics", label: "Summary Statistics" },
+  //   ],
+  //   [],
+  // );
+
+  /*
+  const SidebarNav = ({ sections, activeSection, sidebarOpen, setSidebarOpen }) => {
+    return (
+      <>
+        {sidebarOpen && (
+          <div
+            className="eda-overlay"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
+        <aside className={`eda-sidebar ${sidebarOpen ? "open" : ""}`}>
+          <div className="eda-sidebar-header">
+            <span>Navigation</span>
+            <button
+              className="eda-sidebar-close"
+              onClick={() => setSidebarOpen(false)}
+            >
+              ×
+            </button>
+          </div>
+
+          <div className="eda-sidebar-body">
+            {sections.map((section) => (
+              <button
+                key={section.id}
+                className={`eda-sidebar-link ${activeSection === section.id ? "active" : ""
+                  }`}
+                onClick={() => {
+                  const el = document.getElementById(section.id);
+                  if (el) {
+                    el.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }
+                  setSidebarOpen(false);
+                }}
+              >
+                {section.label}
+              </button>
+            ))}
+          </div>
+        </aside>
+      </>
+    );
+  };*/
+  /*
+    useEffect(() => {
+      const handleScroll = () => {
+        const offset = window.scrollY + 120;
+        let current = navSections[0]?.id || "sample-data";
+        navSections.forEach((section) => {
+          const element = document.getElementById(section.id);
+          if (element && element.offsetTop <= offset) {
+            current = section.id;
+          }
+        });
+        setActiveSection(current);
+      };
+  
+      handleScroll();
+      window.addEventListener("scroll", handleScroll, { passive: true });
+      return () => window.removeEventListener("scroll", handleScroll);
+    }, [navSections]);
+  
+    const handleNavSelect = (id) => {
+      const target = document.getElementById(id);
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    };
+  
+    const SidebarNav = ({ sections, activeSection, onSelect, onClose }) => (
+      <aside className={`eda-sidebar ${sidebarOpen ? "open" : "closed"}`} aria-label="EDA navigation">
+        <div className="eda-sidebar-header">
+          <span>Index</span>
+          <button
+            type="button"
+            className="eda-sidebar-close"
+            onClick={onClose}
+            aria-label="Hide index"
+          >
+            ×
+          </button>
+        </div>
+        <div className="eda-sidebar-body">
+          <div className="eda-sidebar-copy">
+            Jump directly to the most important analysis sections.
+          </div>
+          <nav className="eda-sidebar-links" aria-label="EDA sections">
+            {sections.map((section) => (
+              <button
+                type="button"
+                key={section.id}
+                className={`eda-sidebar-link ${activeSection === section.id ? "active" : ""}`}
+                onClick={() => onSelect(section.id)}
+              >
+                {section.label}
+              </button>
+            ))}
+          </nav>
+        </div>
+      </aside>
+    );
+  */
+  const renderExpandedSection = () => {
+    if (!expandedSection) return null;
+    switch (expandedSection) {
+      case "target-distribution":
+        return (
+          <TargetDistributionPanel
+            targetColumn={targetColumn}
+            distribution={targetDistribution}
+            targetType={targetType}
+            onCardExpand={openChart}
+          />
+        );
+      case "categorical-vs-target":
+        return (
+          <CategoricalTargetPanel
+            targetColumn={targetColumn}
+            distributions={categoricalTargetDistribution}
+            onCardExpand={openChart}
+          />
+        );
+      case "box-plots":
+        return <BoxPlotPanel boxPlots={data.box_plots} onCardExpand={openChart} />;
+      case "histograms":
+        return <HistogramPanel histograms={data.histograms} onCardExpand={openChart} />;
+      case "categorical-distribution":
+        return <CategoricalDistributionPanel categorical={data.categorical} onCardExpand={openChart} />;
+      case "correlation-matrix":
+        return (
+          <CorrelationMatrixPanel
+            correlation={data.correlation}
+            selectedPair={selectedPair}
+            onSelectPair={setSelectedPair}
+            onCardExpand={openChart}
+          />
+        );
+      case "scatter-plots":
+        return (
+          <ScatterPairs
+            correlation={data.correlation}
+            scatterData={data.scatter_data}
+            selectedPair={selectedPair}
+            onSelectPair={setSelectedPair}
+            onCardExpand={openChart}
+          />
+        );
+      case "feature-importance":
+        return (
+          <FeatureImportancePanel
+            featureImportance={featureImportance}
+            onCardExpand={openChart}
+          />
+        );
+      default:
+        return null;
+    }
+  };
 
   if (!data && !error)
     return (
@@ -1090,32 +2380,63 @@ export default function EDA() {
     (a, b) => a + b,
     0,
   );
+  const targetColumn = data.target_column;
+  const targetType = data.target_type;
+  const targetDistribution = data.target_distribution || {};
+  const categoricalTargetDistribution = data.categorical_target_distribution || {};
 
   return (
     <Layout>
+      <button
+        className="hamburger-btn"
+        onClick={() => setSidebarOpen((prev) => !prev)}
+        aria-label="Toggle EDA index"
+        title="Toggle EDA index"
+      >
+        <span />
+        <span />
+        <span />
+      </button>
       <div className="eda-root">
-        <div className="eda-inner">
+        <SidebarNav
+          sections={navSections}
+          activeSection={activeSection}
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+        />
+        <div className={`eda-content ${sidebarOpen ? "with-sidebar" : "no-sidebar"}`}>
+          {(expandedSection || expandedChart) && (
+            <ExpandOverlay
+              title={expandedChart?.title || "Expanded Graph"}
+              onClose={closeExpanded}
+            >
+              {expandedChart ? expandedChart.content : renderExpandedSection()}
+            </ExpandOverlay>
+          )}
           {/* ── Header ── */}
           <div className="page-header">
-            <div className="page-eyebrow">
-              AutoML · Exploratory Data Analysis
+            <div>
+              <div className="page-eyebrow">
+                AutoML · Exploratory Data Analysis
+              </div>
+              <h1 className="page-title">
+                EDA <span>Dashboard</span>
+                {data.has_model && (
+                  <span className="badge badge-green">● model ready</span>
+                )}
+                {totalOutliers > 0 && (
+                  <span className="badge badge-red">
+                    ⚠ {totalOutliers} outliers
+                  </span>
+                )}
+                {duplicateRows > 0 && (
+                  <span className="badge badge-gold">
+                    ⚠ {duplicateRows} dupes
+                  </span>
+                )}
+              </h1>
+
             </div>
-            <h1 className="page-title">
-              EDA <span>Dashboard</span>
-              {data.has_model && (
-                <span className="badge badge-green">● model ready</span>
-              )}
-              {totalOutliers > 0 && (
-                <span className="badge badge-red">
-                  ⚠ {totalOutliers} outliers
-                </span>
-              )}
-              {duplicateRows > 0 && (
-                <span className="badge badge-gold">
-                  ⚠ {duplicateRows} dupes
-                </span>
-              )}
-            </h1>
           </div>
 
           {/* ── Stat strip ── */}
@@ -1277,7 +2598,7 @@ export default function EDA() {
           </div>
 
           {/* ── Sample ── */}
-          <div className="section" style={{ animationDelay: "0.08s" }}>
+          <div className="section" id="sample-data" style={{ animationDelay: "0.08s" }}>
             <div className="section-label">Sample Data</div>
             <div className="panel">
               <div className="panel-bar" />
@@ -1312,186 +2633,49 @@ export default function EDA() {
             />
           )}
 
+          {/* ── Categorical vs Target ── */}
+          <CategoricalTargetPanel
+            targetColumn={targetColumn}
+            distributions={categoricalTargetDistribution}
+            onCardExpand={openChart}
+          />
+
           {/* ── Outlier Detection ── */}
           <OutlierPanel outliers={data.outliers} numRows={data.num_rows} />
+
+          {/* ── Box plots ── */}
+          <BoxPlotPanel boxPlots={data.box_plots} onCardExpand={openChart} />
+
+          {/* ── Redundant features ── */}
+          <RedundantFeaturesPanel features={data.redundant_features} />
 
           {/* ── ML Readiness ── */}
           <MLReadinessPanel data={data} />
 
           {/* ── Histograms ── */}
-          {data.histograms &&
-            numericCols.length > 0 &&
-            Object.keys(data.histograms).length > 0 && (
-              <div className="section" style={{ animationDelay: "0.17s" }}>
-                <div className="section-label">Histograms</div>
-                <div className="chart-grid">
-                  {Object.entries(data.histograms).map(([col, values]) => (
-                    <div className="chart-card" key={col}>
-                      <div className="chart-card-bar" />
-                      <div className="chart-card-body">
-                        <div className="chart-col-name">
-                          <div className="chart-col-dot" />
-                          {col}
-                        </div>
-                        <ResponsiveContainer width="100%" height={200}>
-                          <BarChart
-                            data={values}
-                            margin={{ top: 0, right: 0, bottom: 0, left: -20 }}
-                          >
-                            <CartesianGrid
-                              strokeDasharray="2 4"
-                              stroke={BORDER}
-                              vertical={false}
-                            />
-                            <XAxis
-                              dataKey="bin"
-                              tick={{
-                                fill: TEXT_MUT,
-                                fontSize: 9,
-                                fontFamily: "'DM Mono'",
-                              }}
-                              axisLine={false}
-                              tickLine={false}
-                            />
-                            <YAxis
-                              tick={{
-                                fill: TEXT_MUT,
-                                fontSize: 9,
-                                fontFamily: "'DM Mono'",
-                              }}
-                              axisLine={false}
-                              tickLine={false}
-                            />
-                            <Tooltip
-                              content={<ChartTooltip />}
-                              cursor={{ fill: "rgba(99,210,179,0.06)" }}
-                            />
-                            <Bar
-                              dataKey="count"
-                              fill={ACCENT}
-                              radius={[2, 2, 0, 0]}
-                            />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+          {data.histograms && numericCols.length > 0 && Object.keys(data.histograms).length > 0 && (
+            <HistogramPanel
+              histograms={data.histograms}
+              onCardExpand={openChart}
+            />
+          )}
 
           {/* ── Categorical pie charts ── */}
-          {data.categorical &&
-            categoricalCols.length > 0 &&
-            Object.keys(data.categorical).length > 0 && (
-              <div className="section" style={{ animationDelay: "0.19s" }}>
-                <div className="section-label">Categorical Distribution</div>
-                <div className="chart-grid">
-                  {Object.entries(data.categorical).map(([col, values]) => {
-                    const chartData = buildPieChartData(values, 6);
-                    return (
-                      <div className="chart-card" key={col}>
-                        <div className="chart-card-bar violet" />
-                        <div className="chart-card-body">
-                          <div className="chart-col-name">
-                            <div className="chart-col-dot violet" />
-                            {col}
-                          </div>
-                          <ResponsiveContainer width="100%" height={220}>
-                            <PieChart>
-                              <Pie
-                                data={chartData}
-                                dataKey="value"
-                                nameKey="name"
-                                outerRadius={80}
-                                innerRadius={36}
-                                paddingAngle={2}
-                              >
-                                {chartData.map((_, i) => (
-                                  <Cell
-                                    key={i}
-                                    fill={PIE_COLORS[i % PIE_COLORS.length]}
-                                    stroke="none"
-                                  />
-                                ))}
-                              </Pie>
-                              <Tooltip content={<ChartTooltip />} />
-                              <Legend content={<PieLegend />} />
-                            </PieChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+          {data.categorical && categoricalCols.length > 0 && Object.keys(data.categorical).length > 0 && (
+            <CategoricalDistributionPanel
+              categorical={data.categorical}
+              onCardExpand={openChart}
+            />
+          )}
 
           {/* ── Correlation matrix ── */}
           {data.correlation && Object.keys(data.correlation).length > 0 && (
-            <div className="section" style={{ animationDelay: "0.21s" }}>
-              <div className="section-label">
-                Correlation Matrix{" "}
-                <span
-                  style={{
-                    fontFamily: "var(--mono)",
-                    fontSize: 9,
-                    color: TEXT_MUT,
-                    textTransform: "none",
-                    letterSpacing: 0,
-                  }}
-                >
-                  · click a cell to open scatter plot
-                </span>
-              </div>
-              <div className="panel">
-                <div className="panel-bar gold" />
-                <div className="panel-body">
-                  <div className="corr-scroll">
-                    <table className="corr-table">
-                      <thead>
-                        <tr>
-                          <th />
-                          {Object.keys(data.correlation).map((col) => (
-                            <th key={col}>{col}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {Object.entries(data.correlation).map(([row, cols]) => (
-                          <tr key={row}>
-                            <th>{row}</th>
-                            {Object.entries(cols).map(([col, val], i) => {
-                              const pairKey = [row, col].sort().join("__");
-                              const isSelected = selectedPair === pairKey;
-                              return (
-                                <td
-                                  key={i}
-                                  className={isSelected ? "selected" : ""}
-                                  style={{
-                                    background: corrColor(val),
-                                    color:
-                                      Math.abs(val) > 0.5
-                                        ? "#e8eaf0"
-                                        : TEXT_DIM,
-                                  }}
-                                  onClick={() =>
-                                    row !== col &&
-                                    setSelectedPair(isSelected ? null : pairKey)
-                                  }
-                                >
-                                  {val.toFixed(2)}
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <CorrelationMatrixPanel
+              correlation={data.correlation}
+              selectedPair={selectedPair}
+              onSelectPair={setSelectedPair}
+              onCardExpand={openChart}
+            />
           )}
 
           {/* ── Scatter Plots ── */}
@@ -1500,69 +2684,19 @@ export default function EDA() {
             scatterData={data.scatter_data}
             selectedPair={selectedPair}
             onSelectPair={setSelectedPair}
+            onCardExpand={openChart}
           />
 
           {/* ── Feature importance ── */}
           {featureImportance.length > 0 && (
-            <div className="section" style={{ animationDelay: "0.25s" }}>
-              <div className="section-label">Feature Importance</div>
-              <div className="panel">
-                <div className="panel-bar violet" />
-                <div className="panel-body">
-                  <ResponsiveContainer
-                    width="100%"
-                    height={Math.max(200, featureImportance.length * 28)}
-                  >
-                    <BarChart
-                      layout="vertical"
-                      data={featureImportance}
-                      margin={{ top: 0, right: 20, bottom: 0, left: 20 }}
-                    >
-                      <CartesianGrid
-                        strokeDasharray="2 4"
-                        stroke={BORDER}
-                        horizontal={false}
-                      />
-                      <XAxis
-                        type="number"
-                        tick={{
-                          fill: TEXT_MUT,
-                          fontSize: 9,
-                          fontFamily: "'DM Mono'",
-                        }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <YAxis
-                        type="category"
-                        dataKey="name"
-                        width={130}
-                        tick={{
-                          fill: TEXT_DIM,
-                          fontSize: 10,
-                          fontFamily: "'DM Mono'",
-                        }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <Tooltip
-                        content={<ChartTooltip />}
-                        cursor={{ fill: "rgba(167,139,250,0.06)" }}
-                      />
-                      <Bar
-                        dataKey="value"
-                        fill={VIOLET}
-                        radius={[0, 2, 2, 0]}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </div>
+            <FeatureImportancePanel
+              featureImportance={featureImportance}
+              onCardExpand={openChart}
+            />
           )}
 
           {/* ── Missing values ── */}
-          <div className="section" style={{ animationDelay: "0.27s" }}>
+          <div className="section" id="missing-values" style={{ animationDelay: "0.27s" }}>
             <div className="section-label">Missing Values</div>
             <div className="panel">
               <div className="panel-bar red" />
@@ -1613,40 +2747,101 @@ export default function EDA() {
           </div>
 
           {/* ── Summary statistics ── */}
-          {data.summary && summaryColNames.length > 0 && (
-            <div className="section" style={{ animationDelay: "0.29s" }}>
-              <div className="section-label">Summary Statistics</div>
-              <div className="summary-grid">
-                {summaryColNames.map((col) => (
-                  <div className="summary-col-card" key={col}>
-                    <div className="summary-col-name">
-                      <svg
-                        width="9"
-                        height="9"
-                        viewBox="0 0 10 10"
-                        fill={ACCENT}
-                      >
-                        <circle cx="5" cy="5" r="5" />
-                      </svg>
-                      {col}
-                    </div>
-                    {STAT_KEYS.filter(
-                      (k) => data.summary[col]?.[k] !== undefined,
-                    ).map((k) => (
-                      <div className="summary-stat-row" key={k}>
-                        <span className="summary-stat-key">{k}</span>
-                        <span className="summary-stat-val">
-                          {typeof data.summary[col][k] === "number"
-                            ? data.summary[col][k].toFixed(4)
-                            : data.summary[col][k]}
-                        </span>
-                      </div>
-                    ))}
+          <div className="section" style={{ animationDelay: "0.27s" }}>
+            <div className="section-label">Missing Values</div>
+            <div className="panel">
+              <div className="panel-bar red" />
+              <div className="panel-body">
+                {missingEntries.every(([, v]) => v === 0) ? (
+                  <div
+                    style={{
+                      fontFamily: "var(--mono)",
+                      fontSize: 12,
+                      color: ACCENT,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
+                    <svg
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke={ACCENT}
+                      strokeWidth="2.5"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    No missing values detected
                   </div>
-                ))}
+                ) : (
+                  <div className="missing-list">
+                    {missingEntries
+                      .filter(([, v]) => v > 0)
+                      .map(([col, val]) => (
+                        <div className="missing-row" key={col}>
+                          <div className="missing-col">{col}</div>
+                          <div className="missing-bar-track">
+                            <div
+                              className="missing-bar-fill"
+                              style={{ width: `${(val / maxMissing) * 100}%` }}
+                            />
+                          </div>
+                          <div className="missing-count">{val}</div>
+                        </div>
+                      ))}
+                  </div>
+                )}
               </div>
             </div>
-          )}
+          </div>
+
+          {/* ── Target Distribution ── */}
+          <TargetDistributionPanel
+            targetColumn={targetColumn}
+            distribution={targetDistribution}
+            targetType={targetType}
+            onCardExpand={openChart}
+          />
+
+          {/* ── Summary statistics ── */}
+          {
+            data.summary && summaryColNames.length > 0 && (
+              <div className="section" id="summary-statistics" style={{ animationDelay: "0.29s" }}>
+                <div className="section-label">Summary Statistics</div>
+                <div className="summary-grid">
+                  {summaryColNames.map((col) => (
+                    <div className="summary-col-card" key={col}>
+                      <div className="summary-col-name">
+                        <svg
+                          width="9"
+                          height="9"
+                          viewBox="0 0 10 10"
+                          fill={ACCENT}
+                        >
+                          <circle cx="5" cy="5" r="5" />
+                        </svg>
+                        {col}
+                      </div>
+                      {STAT_KEYS.filter(
+                        (k) => data.summary[col]?.[k] !== undefined,
+                      ).map((k) => (
+                        <div className="summary-stat-row" key={k}>
+                          <span className="summary-stat-key">{k}</span>
+                          <span className="summary-stat-val">
+                            {typeof data.summary[col][k] === "number"
+                              ? data.summary[col][k].toFixed(4)
+                              : data.summary[col][k]}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          }
 
           {/* ── CTA row ── */}
           <div className="action-row">
@@ -1684,8 +2879,8 @@ export default function EDA() {
               </button>
             )}
           </div>
-        </div>
-      </div>
-    </Layout>
+        </div >
+      </div >
+    </Layout >
   );
 }

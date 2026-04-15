@@ -11,6 +11,7 @@ export default function Upload() {
   const [loading, setLoading] = useState(false);
   const [datasets, setDatasets] = useState([]);
   const [columns, setColumns] = useState([]);
+  const [redundantFeatures, setRedundantFeatures] = useState([]);
   const [selectedDataset, setSelectedDataset] = useState("");
   const [error, setError] = useState("");
   const [dragOver, setDragOver] = useState(false);
@@ -65,9 +66,11 @@ export default function Upload() {
           new URLSearchParams({ name: nextDataset }),
         );
         setColumns(res.data.columns || []);
+        setRedundantFeatures(res.data.redundant_features || []);
       } catch (err) {
         console.error(err);
         setColumns([]);
+        setRedundantFeatures([]);
       }
     }
   };
@@ -78,6 +81,7 @@ export default function Upload() {
       setFile(f);
       setSelectedDataset("");
       setTarget("");
+      setRedundantFeatures([]);
 
       const fileColumns = await readCsvHeader(f);
       setColumns(fileColumns);
@@ -112,6 +116,7 @@ export default function Upload() {
         const res = await axios.post(`${API}/upload`, formData);
         columns = res.data.columns;
         setColumns(columns);
+        setRedundantFeatures(res.data.redundant_features || []);
       }
 
       const trainRes = await axios.post(
@@ -127,6 +132,10 @@ export default function Upload() {
       localStorage.setItem(
         "automl_types",
         JSON.stringify(trainRes.data.column_types),
+      );
+      localStorage.setItem(
+        "automl_redundant_features",
+        JSON.stringify(trainRes.data.redundant_features || redundantFeatures),
       );
 
       //  navigate
@@ -260,12 +269,26 @@ export default function Upload() {
                   value={target}
                 >
                   <option value="">Choose a Target Column…</option>
-                  {columns.map((col) => (
-                    <option key={col} value={col}>
-                      {col}
-                    </option>
-                  ))}
+                  {columns
+                    .filter((col) => !redundantFeatures.includes(col))
+                    .map((col) => (
+                      <option key={col} value={col}>
+                        {col}
+                      </option>
+                    ))}
                 </select>
+                {redundantFeatures.length > 0 && (
+                  <div
+                    style={{
+                      marginTop: 8,
+                      fontSize: 11,
+                      color: "#9ca3af",
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    High-cardinality columns excluded from target selection: {redundantFeatures.join(", ")}.
+                  </div>
+                )}
               </div>
 
               {/* Submit */}

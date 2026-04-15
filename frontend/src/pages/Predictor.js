@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import API from "../api";
 import Layout from "../components/Layout";
@@ -18,11 +18,24 @@ export default function Predictor() {
 
   const [input, setInput] = useState({});
   const [prediction, setPrediction] = useState(null);
+  const [downloadUrl, setDownloadUrl] = useState("");
+  const [downloadName, setDownloadName] = useState("");
+  const [bulkFile, setBulkFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const parsedColumns = safeParseJSON(rawColumns);
+  const parsedRedundant = safeParseJSON(localStorage.getItem("automl_redundant_features"));
   const columns = Array.isArray(parsedColumns) ? parsedColumns : [];
+  const redundantFeatures = Array.isArray(parsedRedundant) ? parsedRedundant : [];
+
+  useEffect(() => {
+    return () => {
+      if (downloadUrl) {
+        URL.revokeObjectURL(downloadUrl);
+      }
+    };
+  }, [downloadUrl]);
 
   // Create lowercase mapping (JS version of your Python logic)
   const colMap = Object.fromEntries(
@@ -73,7 +86,9 @@ export default function Predictor() {
     );
   }
 
-  const inputCols = columns.filter((col) => col !== target);
+  const inputCols = columns.filter(
+    (col) => col !== target && !redundantFeatures.includes(col),
+  );
 
   const handleChange = (col, value) => {
     setInput((prev) => ({
@@ -86,6 +101,50 @@ export default function Predictor() {
           : value,
     }));
   };
+
+  const handleBulkFileChange = (file) => {
+    setBulkFile(file);
+    setDownloadUrl("");
+    setDownloadName("");
+    setError("");
+  };
+
+  const handlePredictDataset = async () => {
+    setError("");
+    if (!bulkFile) {
+      setError("Choose a CSV file to run batch prediction.");
+      return;
+    }
+    if (!bulkFile.name.toLowerCase().endsWith(".csv")) {
+      setError("Bulk prediction requires a .csv file.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", bulkFile);
+      const res = await axios.post(`${API}/predict_dataset`, formData, {
+        responseType: "blob",
+      });
+      const blob = new Blob([res.data], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      setDownloadUrl(url);
+      setDownloadName(`predictions_${bulkFile.name}`);
+    } catch (err) {
+      console.error(err);
+      setError(
+        err.response?.data?.detail || "Bulk prediction failed. Please upload a dataset with the same original structure.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const rawTypes = localStorage.getItem("automl_types");
+  const parsedTypes = safeParseJSON(rawTypes);
+  const columnTypes =
+    parsedTypes && typeof parsedTypes === "object" ? parsedTypes : {};
 
   const handlePredict = async () => {
     setError("");
@@ -112,10 +171,6 @@ export default function Predictor() {
       setLoading(false);
     }
   };
-  const rawTypes = localStorage.getItem("automl_types");
-  const parsedTypes = safeParseJSON(rawTypes);
-  const columnTypes =
-    parsedTypes && typeof parsedTypes === "object" ? parsedTypes : {};
 
   return (
     <Layout>
@@ -134,6 +189,47 @@ export default function Predictor() {
             <div className="target-badge">
               <span className="target-badge-label">Target →</span>
               {target}
+            </div>
+          </div>
+
+          {/* Batch prediction card */}
+          <div className="pred-card">
+            <div className="card-bar gold" />
+            <div className="card-body">
+              <div className="section-label">Batch CSV Prediction</div>
+              <div className="field-wrap">
+                <div className="field-label">Upload dataset</div>
+                <input
+                  className="styled-input"
+                  type="file"
+                  accept=".csv"
+                  onChange={(e) => handleBulkFileChange(e.target.files?.[0] ?? null)}
+                />
+              </div>
+              <div className="field-wrap">
+                <div className="field-label">File to predict</div>
+                <div style={{ color: '#9ca3af', fontSize: 12 }}>
+                  Upload a CSV with the same columns as the original dataset.
+                </div>
+              </div>
+              <button
+                className={`submit-btn${loading ? " loading" : ""}`}
+                onClick={handlePredictDataset}
+                disabled={loading}
+              >
+                {loading && <div className="spinner" />}
+                {loading ? "Generating predictions…" : "Predict CSV"}
+              </button>
+              {downloadUrl && (
+                <a
+                  className="submit-btn"
+                  style={{ marginTop: 12, background: 'transparent', color: '#63d2b3', border: '1px solid rgba(99,210,179,0.3)' }}
+                  href={downloadUrl}
+                  download={downloadName}
+                >
+                  Download predictions
+                </a>
+              )}
             </div>
           </div>
 
