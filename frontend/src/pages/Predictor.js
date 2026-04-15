@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import API from "../api";
 import Layout from "../components/Layout";
-import './styles/Predictor.css';
+import "./styles/Predictor.css";
 
 function safeParseJSON(value) {
   try {
@@ -22,12 +22,17 @@ export default function Predictor() {
   const [downloadName, setDownloadName] = useState("");
   const [bulkFile, setBulkFile] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [bulkError, setBulkError] = useState("");
+  const [singleError, setSingleError] = useState("");
 
   const parsedColumns = safeParseJSON(rawColumns);
-  const parsedRedundant = safeParseJSON(localStorage.getItem("automl_redundant_features"));
+  const parsedRedundant = safeParseJSON(
+    localStorage.getItem("automl_redundant_features"),
+  );
   const columns = Array.isArray(parsedColumns) ? parsedColumns : [];
-  const redundantFeatures = Array.isArray(parsedRedundant) ? parsedRedundant : [];
+  const redundantFeatures = Array.isArray(parsedRedundant)
+    ? parsedRedundant
+    : [];
 
   useEffect(() => {
     return () => {
@@ -106,17 +111,17 @@ export default function Predictor() {
     setBulkFile(file);
     setDownloadUrl("");
     setDownloadName("");
-    setError("");
+    setBulkError("");
   };
 
   const handlePredictDataset = async () => {
-    setError("");
+    setBulkError("");
     if (!bulkFile) {
-      setError("Choose a CSV file to run batch prediction.");
+      setBulkError("Choose a CSV file to run batch prediction.");
       return;
     }
     if (!bulkFile.name.toLowerCase().endsWith(".csv")) {
-      setError("Bulk prediction requires a .csv file.");
+      setBulkError("Bulk prediction requires a .csv file.");
       return;
     }
 
@@ -133,8 +138,9 @@ export default function Predictor() {
       setDownloadName(`predictions_${bulkFile.name}`);
     } catch (err) {
       console.error(err);
-      setError(
-        err.response?.data?.detail || "Bulk prediction failed. Please upload a dataset with the same original structure.",
+      setBulkError(
+        err.response?.data?.detail ||
+          "Bulk prediction failed. Please upload a dataset with the same original structure.",
       );
     } finally {
       setLoading(false);
@@ -147,12 +153,12 @@ export default function Predictor() {
     parsedTypes && typeof parsedTypes === "object" ? parsedTypes : {};
 
   const handlePredict = async () => {
-    setError("");
+    setSingleError("");
     const missing = inputCols.filter(
       (col) => input[col] === undefined || input[col] === "",
     );
     if (missing.length > 0) {
-      setError(
+      setSingleError(
         `Fill in all fields before predicting. Missing: ${missing.join(", ")}`,
       );
       return;
@@ -164,7 +170,7 @@ export default function Predictor() {
       setPrediction(res.data.prediction);
     } catch (err) {
       console.error(err);
-      setError(
+      setSingleError(
         err.response?.data?.detail || "Prediction failed. Please try again.",
       );
     } finally {
@@ -197,18 +203,37 @@ export default function Predictor() {
             <div className="card-bar gold" />
             <div className="card-body">
               <div className="section-label">Batch CSV Prediction</div>
+              {bulkError && (
+                <div className="error-box" style={{ marginBottom: "16px" }}>
+                  <svg
+                    width="13"
+                    height="13"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                  </svg>
+                  {bulkError}
+                </div>
+              )}
               <div className="field-wrap">
                 <div className="field-label">Upload dataset</div>
                 <input
                   className="styled-input"
                   type="file"
                   accept=".csv"
-                  onChange={(e) => handleBulkFileChange(e.target.files?.[0] ?? null)}
+                  onChange={(e) =>
+                    handleBulkFileChange(e.target.files?.[0] ?? null)
+                  }
                 />
               </div>
               <div className="field-wrap">
                 <div className="field-label">File to predict</div>
-                <div style={{ color: '#9ca3af', fontSize: 12 }}>
+                <div style={{ color: "#9ca3af", fontSize: 12 }}>
                   Upload a CSV with the same columns as the original dataset.
                 </div>
               </div>
@@ -223,7 +248,12 @@ export default function Predictor() {
               {downloadUrl && (
                 <a
                   className="submit-btn"
-                  style={{ marginTop: 12, background: 'transparent', color: '#63d2b3', border: '1px solid rgba(99,210,179,0.3)' }}
+                  style={{
+                    marginTop: 12,
+                    background: "transparent",
+                    color: "#63d2b3",
+                    border: "1px solid rgba(99,210,179,0.3)",
+                  }}
                   href={downloadUrl}
                   download={downloadName}
                 >
@@ -239,7 +269,7 @@ export default function Predictor() {
             <div className="card-body">
               <div className="section-label">Feature Inputs</div>
 
-              {error && (
+              {singleError && (
                 <div className="error-box">
                   <svg
                     width="13"
@@ -253,7 +283,7 @@ export default function Predictor() {
                     <line x1="12" y1="8" x2="12" y2="12" />
                     <line x1="12" y1="16" x2="12.01" y2="16" />
                   </svg>
-                  {error}
+                  {singleError}
                 </div>
               )}
 
