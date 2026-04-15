@@ -1,6 +1,18 @@
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.linear_model import LinearRegression, LogisticRegression
-from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier, GradientBoostingClassifier, GradientBoostingRegressor
+from sklearn.ensemble import (
+    RandomForestRegressor,
+    RandomForestClassifier,
+    GradientBoostingClassifier,
+    GradientBoostingRegressor,
+    AdaBoostClassifier,
+    AdaBoostRegressor,
+    ExtraTreesClassifier,
+    ExtraTreesRegressor,
+    HistGradientBoostingClassifier,
+    HistGradientBoostingRegressor,
+)
+from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import r2_score, accuracy_score, f1_score, mean_absolute_error
@@ -9,11 +21,12 @@ import numpy as np
 import threading
 
 
+#error handling 
 class TrainingCancelledError(Exception):
     """Raised when training is interrupted by a cancel signal."""
     pass
 
-
+#CLASSIFICATION OR REGRESSION
 def _detect_problem_type(y):
     """Heuristic: classification if target is string or low-cardinality int."""
     if y.dtype == "object" or pd.api.types.is_bool_dtype(y):
@@ -23,7 +36,7 @@ def _detect_problem_type(y):
         return "classification"
     return "regression"
 
-
+#returns column types
 def _infer_column_types(df: pd.DataFrame):
     """Infer numeric vs categorical columns, including numeric-like object columns."""
     numeric_cols = []
@@ -31,16 +44,17 @@ def _infer_column_types(df: pd.DataFrame):
 
     for col in df.columns:
         series = df[col]
-        if pd.api.types.is_numeric_dtype(series) or pd.api.types.is_bool_dtype(series):
+        if pd.api.types.is_numeric_dtype(series) or pd.api.types.is_bool_dtype(series):   #NUMBER OR BOOLEAN
             numeric_cols.append(col)
             continue
 
         non_null = series.dropna().astype(str).str.strip()
+
         if non_null.empty:
             categorical_cols.append(col)
             continue
 
-        coerced = pd.to_numeric(non_null, errors="coerce")
+        coerced = pd.to_numeric(non_null, errors="coerce")                             # <--  HOW MANY ARE NUMERIC ?
         converted_ratio = coerced.notna().mean()
         if converted_ratio >= 0.9 and coerced.notna().sum() >= 3:
             numeric_cols.append(col)
@@ -50,31 +64,77 @@ def _infer_column_types(df: pd.DataFrame):
     return numeric_cols, categorical_cols
 
 
+def _find_redundant_features(df: pd.DataFrame, threshold: float = 0.5):
+    """Return high-cardinality categorical columns only.
+
+    Only object/string columns are considered redundant for this rule.
+    Numeric columns are preserved even when they have many unique values.
+    """
+    if df.empty:
+        return []
+
+    redundant = []
+    row_count = len(df)
+    for col in df.columns:
+        if not pd.api.types.is_string_dtype(df[col]):
+            continue
+        unique_ratio = df[col].nunique(dropna=False) / row_count
+        if unique_ratio > threshold:
+            redundant.append(col)
+    return redundant
+
+
 def _check_cancel(cancel_event: threading.Event | None):
     """Raise TrainingCancelledError if the cancel signal has been set."""
     if cancel_event is not None and cancel_event.is_set():
         raise TrainingCancelledError("Training was cancelled by client disconnect.")
+#CANCEL TRAINING
+
+
+def _prepare_predict_input(df: pd.DataFrame, numeric_cols: list, numeric_fill_values: dict, columns: list, global_df: pd.DataFrame):
+    """Prepare raw prediction data for one-hot encoding and model columns."""
+    X = df.copy()
+    for col in X.columns:
+        if col in numeric_cols:
+            X[col] = pd.to_numeric(X[col], errors="coerce")
+            X[col] = X[col].fillna(numeric_fill_values.get(col, 0.0))
+        else:
+            X[col] = X[col].astype(str).fillna("missing")
+            if col in global_df.columns:
+                valid_values = global_df[col].dropna().astype(str).unique()
+                X[col] = X[col].where(X[col].isin(valid_values), "missing")
+
+    X = pd.get_dummies(X)
+    X = X.reindex(columns=columns, fill_value=0)
+    return X
 
 
 def train_model(df, target, cancel_event: threading.Event | None = None):
     col_map = {col.lower(): col for col in df.columns}
     target_lower = target.strip().lower()
     if target_lower not in col_map:
-        raise ValueError(f"Target column '{target}' not found in dataset.")
+        raise ValueError(f"Target column '{target}' not found in dataset.")    
+   #<---->#target column not in dataset
     target = col_map[target_lower]
 
     _check_cancel(cancel_event)
 
-    X = df.drop(columns=[target])
+    redundant_features = _find_redundant_features(df.drop(columns=[target]))
+    if target in redundant_features:
+        raise ValueError(
+            f"Target column '{target}' has extremely high cardinality and cannot be used for training."
+        )
+
+    X = df.drop(columns=[target] + redundant_features)
     y = df[target].copy()
 
     problem_type = _detect_problem_type(y)
 
-    # --- Encode classification target ---
-    label_encoder = None
+    # --- Encode classification target ---      #WHY USING LABEL ENCODER INSTEAD OF DUMMIES 
+    label_encoder = None   
     if problem_type == "classification" and y.dtype == "object":
         label_encoder = LabelEncoder()
-        y = pd.Series(label_encoder.fit_transform(y), index=y.index)
+        y = pd.Series(label_encoder.fit_transform(y), index=y.index)             #STRINGS TO NUMBERS
 
     _check_cancel(cancel_event)
 
@@ -82,10 +142,13 @@ def train_model(df, target, cancel_event: threading.Event | None = None):
     numeric_cols_orig, categorical_cols_orig = _infer_column_types(X)
     numeric_fill_values = {}
 
+
+# ------FILLING MISSING/NA VALUES----------
     for col in X.columns:
         if col in numeric_cols_orig:
             X[col] = pd.to_numeric(X[col], errors="coerce")
-            fill_value = float(X[col].median()) if not X[col].dropna().empty else 0.0
+            fill_value = float(X[col].median()) if not X[col].dropna().empty else 0.0   #IF NA EXISTS THEN FILL VALUE WITH MEDIAN 
+            
             X[col] = X[col].fillna(fill_value)
             numeric_fill_values[col] = fill_value
         else:
@@ -102,20 +165,24 @@ def train_model(df, target, cancel_event: threading.Event | None = None):
     valid_idx = X.dropna().index
     X = X.loc[valid_idx]
     y = y.loc[valid_idx]
-    X = X.loc[:, X.nunique() > 1]
-
+    X = X.loc[:, X.nunique() > 1]    #remove columns with only one value 
+  
     _check_cancel(cancel_event)
 
     stratify = None
-    if problem_type == "classification" and y.value_counts().min() >= 2:
+    if problem_type == "classification" and y.value_counts().min() >= 2:        #if CLASSIFICATION and min frequency is 2 
         stratify = y
-
+      #<---------------------------------------->
+      
+      
     # --- Train / test split ---
+    #SPLITTING DATA ----------------------> 
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42, stratify=stratify
     )
 
     # --- Define candidate models ---
+
     if problem_type == "classification":
         candidates = {
             "LogisticRegression": Pipeline([
@@ -127,6 +194,16 @@ def train_model(df, target, cancel_event: threading.Event | None = None):
             ),
             "GradientBoostingClassifier": GradientBoostingClassifier(
                 n_estimators=100, learning_rate=0.1, random_state=42
+            ),
+            "ExtraTreesClassifier": ExtraTreesClassifier(
+                n_estimators=200, max_depth=None, random_state=42, n_jobs=-1
+            ),
+            "HistGradientBoostingClassifier": HistGradientBoostingClassifier(
+                learning_rate=0.1, max_iter=100, random_state=42
+            ),
+            "KNeighborsClassifier": KNeighborsClassifier(n_neighbors=5),
+            "AdaBoostClassifier": AdaBoostClassifier(
+                n_estimators=100, learning_rate=0.5, random_state=42
             ),
         }
         cv_scoring = "f1_weighted"
@@ -142,9 +219,23 @@ def train_model(df, target, cancel_event: threading.Event | None = None):
             "GradientBoostingRegressor": GradientBoostingRegressor(
                 n_estimators=100, learning_rate=0.1, random_state=42
             ),
+            "ExtraTreesRegressor": ExtraTreesRegressor(
+                n_estimators=200, random_state=42, n_jobs=-1
+            ),
+            "HistGradientBoostingRegressor": HistGradientBoostingRegressor(
+                learning_rate=0.1, max_iter=100, random_state=42
+            ),
+            "KNeighborsRegressor": KNeighborsRegressor(n_neighbors=5),
+            "AdaBoostRegressor": AdaBoostRegressor(
+                n_estimators=100, learning_rate=0.5, random_state=42
+            ),
         }
         cv_scoring = "r2"
-
+ 
+ 
+ #<======================================================>
+ 
+ 
     best_model = None
     best_score = -np.inf
     scores = {}
@@ -154,6 +245,7 @@ def train_model(df, target, cancel_event: threading.Event | None = None):
         _check_cancel(cancel_event)
 
         try:
+            #<-----------------------CROSS VALIDATION--------------------->
             cv = min(5, len(y_train))
             if problem_type == "classification":
                 cv = min(cv, y_train.value_counts().min())
@@ -177,7 +269,7 @@ def train_model(df, target, cancel_event: threading.Event | None = None):
 
             if len(valid_scores) < len(cv_scores):
                 print(f"⚠️ {name}: {len(cv_scores)-len(valid_scores)} folds failed, using remaining {len(valid_scores)}")
-
+#<==================================== FINAL FITTING ====================================>
             # Final fit on full train set
             model.fit(X_train, y_train)
 
@@ -185,13 +277,14 @@ def train_model(df, target, cancel_event: threading.Event | None = None):
             _check_cancel(cancel_event)
 
             preds = model.predict(X_test)
-
+ 
+ # CV MEAN USED TO CHOOSE THE BEST MODEL 
             if problem_type == "classification":
                 test_score = float(accuracy_score(y_test, preds))
                 f1 = float(f1_score(y_test, preds, average="weighted", zero_division=0))
                 scores[name] = {
                     "cv_mean": round(cv_mean, 4),
-                    "cv_std": round(cv_std, 4),
+                    "cv_std": round(cv_std, 4),                   # F1 SCORE ///// ACCURACY //////// CV MEAN AND SD 
                     "test_accuracy": round(test_score, 4),
                     "test_f1_weighted": round(f1, 4),
                 }
@@ -230,6 +323,8 @@ def train_model(df, target, cancel_event: threading.Event | None = None):
         "numeric_columns": numeric_cols_orig,
         "categorical_columns": categorical_cols_orig,
         "numeric_fill_values": numeric_fill_values,
+        "original_columns": df.drop(columns=[target]).columns.tolist(),
+        "redundant_features": redundant_features,
         "best_model_name": type(best_model.named_steps.get("clf") or best_model.named_steps.get("reg") if hasattr(best_model, "named_steps") else best_model).__name__,
         "best_cv_score": round(float(best_score), 4),
         "label_classes": label_encoder.classes_.tolist() if label_encoder else None,
@@ -239,23 +334,16 @@ def train_model(df, target, cancel_event: threading.Event | None = None):
 
 
 def predict_model(model, data, columns, global_df):
-    df = pd.DataFrame([data])
+    if isinstance(data, pd.DataFrame):
+        df = data.copy()
+    else:
+        df = pd.DataFrame([data])
+
     meta = getattr(model, "_automl_meta", {})
     numeric_cols = set(meta.get("numeric_columns", []))
     numeric_fill_values = meta.get("numeric_fill_values", {})
 
-    for col in df.columns:
-        if col in numeric_cols:
-            df[col] = pd.to_numeric(df[col], errors="coerce")
-            df[col] = df[col].fillna(numeric_fill_values.get(col, 0.0))
-        else:
-            df[col] = df[col].fillna("missing").astype(str)
-            if col in global_df.columns:
-                valid_values = global_df[col].dropna().astype(str).unique()
-                df[col] = df[col].where(df[col].isin(valid_values), "missing")
-
-    df = pd.get_dummies(df)
-    df = df.reindex(columns=columns, fill_value=0)
+    df = _prepare_predict_input(df, numeric_cols, numeric_fill_values, columns, global_df)
 
     preds = model.predict(df)
 
@@ -271,7 +359,7 @@ def predict_model(model, data, columns, global_df):
         "target": meta.get("target"),
     }
 
-    if hasattr(model, "predict_proba"):
+    if hasattr(model, "predict_proba") and len(df) == 1:
         try:
             proba = model.predict_proba(df)[0].tolist()
             result["probabilities"] = {
@@ -282,3 +370,28 @@ def predict_model(model, data, columns, global_df):
             pass
 
     return result
+
+
+def predict_dataset(model, file_df, columns, global_df):
+    if file_df.empty:
+        return []
+
+    meta = getattr(model, "_automl_meta", {})
+    original_columns = meta.get("original_columns", list(global_df.columns))
+    missing = [col for col in original_columns if col not in file_df.columns]
+    if missing:
+        raise ValueError(f"Uploaded dataset is missing columns: {', '.join(missing)}")
+
+    input_df = file_df[original_columns].copy()
+    numeric_cols = set(meta.get("numeric_columns", []))
+    numeric_fill_values = meta.get("numeric_fill_values", {})
+
+    input_df = _prepare_predict_input(input_df, numeric_cols, numeric_fill_values, columns, global_df)
+    preds = model.predict(input_df)
+
+    label_classes = meta.get("label_classes")
+    decoded_preds = preds.tolist()
+    if label_classes and all(isinstance(p, (int, np.integer)) for p in preds):
+        decoded_preds = [label_classes[int(p)] for p in preds]
+
+    return decoded_preds

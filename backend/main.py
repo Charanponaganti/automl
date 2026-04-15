@@ -1,14 +1,16 @@
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 import pandas as pd
 import numpy as np
 import shutil
 import os
+import io
 import asyncio
 from concurrent.futures import ThreadPoolExecutor, Future
 import threading
 
-from model import train_model, predict_model, _infer_column_types
+from model import train_model, predict_model, predict_dataset as predict_dataset_model, _infer_column_types, _find_redundant_features
 
 app = FastAPI(title="AutoML API", version="2.0.0")
 
@@ -137,7 +139,12 @@ async def load_dataset(name: str = Form(...)):
         raise HTTPException(status_code=404, detail=f"Dataset '{name}' not found.")
 
     global_df = _safe_read_csv(path)
-    return {"columns": list(global_df.columns), "rows": len(global_df)}
+    redundant = _find_redundant_features(global_df)
+    return {
+        "columns": list(global_df.columns),
+        "rows": len(global_df),
+        "redundant_features": redundant,
+    }
 
 
 @app.post("/upload")
@@ -156,7 +163,12 @@ async def upload_file(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=f"Could not save file: {e}")
 
     global_df = _safe_read_csv(file_path)
-    return {"columns": list(global_df.columns), "rows": len(global_df)}
+    redundant = _find_redundant_features(global_df)
+    return {
+        "columns": list(global_df.columns),
+        "rows": len(global_df),
+        "redundant_features": redundant,
+    }
 
 
 # ── Train ─────────────────────────────────────────────────────────────────────
@@ -211,6 +223,8 @@ async def train(request: Request, target: str):
 
     except HTTPException:
         raise
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Training failed: {e}")
     finally:
@@ -221,9 +235,10 @@ async def train(request: Request, target: str):
     global_columns = columns
 
     meta = getattr(model, "_automl_meta", {})
+    redundant = meta.get("redundant_features", [])
     column_types = {}
 
-    input_df = global_df.drop(columns=[target])
+    input_df = global_df.drop(columns=[target] + redundant, errors="ignore")
     numeric_cols, categorical_cols = _infer_column_types(input_df)
 
     for col in input_df.columns:
@@ -243,7 +258,8 @@ async def train(request: Request, target: str):
         "problem_type": meta.get("problem_type"),
         "best_model": meta.get("best_model_name"),
         "best_cv_score": meta.get("best_cv_score"),
-        "column_types": column_types
+        "column_types": column_types,
+        "redundant_features": redundant,
     }
 
 
@@ -252,59 +268,151 @@ async def train(request: Request, target: str):
 async def eda():
     _require_dataset()
 
-    df = global_df.copy()
-    numeric_df = df.select_dtypes(include=["number"])
+    meta = getattr(global_model, "_automl_meta", {}) if global_model else {}
+    redundant = meta.get("redundant_features") or _find_redundant_features(global_df)
+    display_df = global_df.drop(columns=redundant, errors="ignore")
+
+    numeric_df = display_df.select_dtypes(include=["number"])
     numeric_cols = list(numeric_df.columns)
 
-    summary = df.describe(include="all").replace({np.nan: None}).to_dict()
+    summary = display_df.describe(include="all").replace({np.nan: None}).to_dict()
     corr = numeric_df.corr().replace({np.nan: 0}).to_dict() if not numeric_df.empty else {}
 
     histograms = {}
     for col in numeric_cols:
-        counts, bins = np.histogram(df[col].dropna(), bins=10)
+        counts, bins = np.histogram(display_df[col].dropna(), bins=6)
         histograms[col] = [
             {"bin": f"{round(bins[i], 2)}–{round(bins[i+1], 2)}", "count": int(counts[i])}
             for i in range(len(counts))
         ]
 
-    categorical = {}
-    for col in df.select_dtypes(include=["object"]).columns:
-        categorical[col] = df[col].value_counts().head(10).to_dict()
+    box_plots = {}
+    for col in numeric_cols:
+        series = display_df[col].dropna().astype(float)
+        if series.empty:
+            continue
+        q1 = float(series.quantile(0.25))
+        q2 = float(series.quantile(0.5))
+        q3 = float(series.quantile(0.75))
+        iqr = q3 - q1
+        lower_whisker = float(series[series >= q1 - 1.5 * iqr].min())
+        upper_whisker = float(series[series <= q3 + 1.5 * iqr].max())
+        outlier_values = series[(series < lower_whisker) | (series > upper_whisker)].tolist()
+        box_plots[col] = {
+            "min": float(series.min()),
+            "q1": q1,
+            "median": q2,
+            "q3": q3,
+            "max": float(series.max()),
+            "iqr": iqr,
+            "lower_whisker": lower_whisker,
+            "upper_whisker": upper_whisker,
+            "outliers": [float(v) for v in outlier_values[:20]],
+            "outlier_count": int(len(outlier_values)),
+        }
 
-    missing = df.isnull().sum().to_dict()
+    categorical = {}
+    for col in display_df.select_dtypes(include=["object"]).columns:
+        categorical[col] = display_df[col].value_counts().head(10).to_dict()
+
+    missing = display_df.isnull().sum().to_dict()
 
     importance = {}
     if global_model is not None:
         estimator = global_model
         if hasattr(global_model, "named_steps"):
             estimator = global_model.named_steps.get("clf") or global_model.named_steps.get("reg")
-        if estimator is not None and hasattr(estimator, "feature_importances_"):
-            importance = dict(zip(global_columns, estimator.feature_importances_.tolist()))
+        if estimator is not None:
+            if hasattr(estimator, "feature_importances_"):
+                importance = dict(zip(global_columns, estimator.feature_importances_.tolist()))
+            elif hasattr(estimator, "coef_"):
+                coefs = estimator.coef_
+                if coefs.ndim == 2:
+                    coefs = np.mean(np.abs(coefs), axis=0)
+                else:
+                    coefs = np.abs(coefs)
+                importance = dict(zip(global_columns, coefs.tolist()))
 
-    duplicate_rows = int(df.duplicated().sum())
-    outliers = _compute_outliers(df, numeric_cols)
-    scatter_data = _compute_scatter_data(df, corr, numeric_cols)
+    duplicate_rows = int(display_df.duplicated().sum())
+    outliers = _compute_outliers(display_df, numeric_cols)
+    scatter_data = _compute_scatter_data(display_df, corr, numeric_cols)
 
-    meta = getattr(global_model, "_automl_meta", {}) if global_model else {}
+    target_column = meta.get("target")
+    target_distribution = {}
+    categorical_target_distribution = {}
+    if (
+        target_column
+        and target_column in global_df.columns
+        and meta.get("problem_type") == "classification"
+    ):
+        target_series = global_df[target_column].dropna().astype(str)
+        target_distribution = target_series.value_counts().to_dict()
+
+        cat_cols = [
+            col
+            for col in display_df.select_dtypes(include=["object"]).columns
+            if col != target_column
+        ]
+        top_categorical = []
+        if importance:
+            cat_scores = {}
+            for feature, score in importance.items():
+                if feature == target_column:
+                    continue
+                normalized = feature
+                for col in cat_cols:
+                    if feature == col or feature.startswith(f"{col}_") or feature.startswith(f"{col}__"):
+                        normalized = col
+                        break
+                if normalized in cat_cols:
+                    cat_scores[normalized] = max(cat_scores.get(normalized, 0), score)
+            top_categorical = sorted(cat_scores, key=lambda c: cat_scores[c], reverse=True)[:3]
+        if not top_categorical:
+            top_categorical = cat_cols[:3]
+
+        for col in top_categorical:
+            values = global_df[col].astype(str).fillna("<missing>")
+            top_values = values.value_counts().nlargest(5).index.tolist()
+            subset = global_df[global_df[col].astype(str).fillna("<missing>").isin(top_values)]
+            if subset.empty:
+                continue
+            grouped = subset.groupby([col, target_column]).size().unstack(fill_value=0)
+            categorical_target_distribution[col] = {
+                "categories": top_values,
+                "target_labels": [str(v) for v in grouped.columns.tolist()],
+                "data": [
+                    {
+                        "category": str(category),
+                        **{str(label): int(grouped.loc[category, label]) for label in grouped.columns},
+                    }
+                    for category in top_values
+                ],
+            }
 
     return {
-        "columns": list(df.columns),
-        "sample": df.head(5).replace({np.nan: None}).to_dict(orient="records"),
+        "columns": list(display_df.columns),
+        "sample": display_df.head(5).replace({np.nan: None}).to_dict(orient="records"),
         "summary": summary,
         "correlation": corr,
         "histograms": histograms,
         "categorical": categorical,
         "missing": missing,
         "importance": importance,
-        "num_rows": len(df),
-        "num_columns": len(df.columns),
+        "num_rows": len(display_df),
+        "num_columns": len(display_df.columns),
         "numeric_columns": meta.get("numeric_columns", numeric_cols),
-        "categorical_columns": meta.get("categorical_columns", list(df.select_dtypes("object").columns)),
-        "missing_total": int(df.isnull().sum().sum()),
+        "categorical_columns": meta.get("categorical_columns", list(display_df.select_dtypes("object").columns)),
+        "missing_total": int(display_df.isnull().sum().sum()),
         "has_model": global_model is not None,
         "duplicate_rows": duplicate_rows,
         "outliers": outliers,
         "scatter_data": scatter_data,
+        "box_plots": box_plots,
+        "redundant_features": redundant,
+        "target_column": target_column,
+        "target_type": meta.get("problem_type"),
+        "target_distribution": target_distribution,
+        "categorical_target_distribution": categorical_target_distribution,
     }
 
 
@@ -338,6 +446,38 @@ async def predict(data: dict):
         raise HTTPException(status_code=500, detail=f"Prediction failed: {e}")
 
     return result
+
+
+@app.post("/predict_dataset")
+async def predict_dataset(file: UploadFile = File(...)):
+    _require_model()
+
+    ext = os.path.splitext(file.filename or "")[-1].lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=415, detail=f"Only CSV files are supported. Got: '{ext}'")
+
+    try:
+        contents = await file.read()
+        dataset = pd.read_csv(io.BytesIO(contents))
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=f"Could not parse uploaded CSV: {e}")
+
+    try:
+        predictions = predict_dataset_model(global_model, dataset, global_columns, global_df)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Bulk prediction failed: {e}")
+
+    output = dataset.copy()
+    output["prediction"] = predictions
+
+    csv_bytes = output.to_csv(index=False).encode("utf-8")
+    return StreamingResponse(
+        io.BytesIO(csv_bytes),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f"attachment; filename=predictions_{file.filename}" 
+        },
+    )
 
 
 # ── Reset ─────────────────────────────────────────────────────────────────────
