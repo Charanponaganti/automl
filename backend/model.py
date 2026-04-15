@@ -64,7 +64,7 @@ def _infer_column_types(df: pd.DataFrame):
     return numeric_cols, categorical_cols
 
 
-def _find_redundant_features(df: pd.DataFrame, threshold: float = 0.5):
+def _find_redundant_features(df: pd.DataFrame, threshold: float = 0.4):
     """Return high-cardinality categorical columns only.
 
     Only object/string columns are considered redundant for this rule.
@@ -247,8 +247,18 @@ def train_model(df, target, cancel_event: threading.Event | None = None):
         try:
             #<-----------------------CROSS VALIDATION--------------------->
             cv = min(5, len(y_train))
+
             if problem_type == "classification":
-                cv = min(cv, y_train.value_counts().min())
+                min_class = y_train.value_counts().min()
+
+                if min_class < 2:
+                    cv = 2
+                else:
+                    cv = min(cv, min_class)
+
+            # FINAL SAFETY
+            if cv < 2:
+                cv = 2
 
             cv_scores = cross_val_score(
                 model, X_train, y_train,

@@ -312,8 +312,9 @@ async def eda():
         }
 
     categorical = {}
-    for col in display_df.select_dtypes(include=["object"]).columns:
-        categorical[col] = display_df[col].value_counts().head(10).to_dict()
+    for col in display_df.select_dtypes(include=["object", "category"]).columns:
+        values = display_df[col].fillna("<missing>").astype(str)
+        categorical[col] = values.value_counts().head(10).to_dict()
 
     missing = display_df.isnull().sum().to_dict()
 
@@ -373,9 +374,11 @@ async def eda():
         for col in top_categorical:
             values = global_df[col].astype(str).fillna("<missing>")
             top_values = values.value_counts().nlargest(5).index.tolist()
-            subset = global_df[global_df[col].astype(str).fillna("<missing>").isin(top_values)]
-            if subset.empty:
-                continue
+            safe_col = global_df[col].astype(str).fillna("<missing>")
+            safe_target = global_df[target_column].astype(str).fillna("<missing>")
+            subset = global_df[safe_col.isin(top_values)].copy()
+            subset[col] = safe_col
+            subset[target_column] = safe_target
             grouped = subset.groupby([col, target_column]).size().unstack(fill_value=0)
             categorical_target_distribution[col] = {
                 "categories": top_values,
@@ -383,7 +386,7 @@ async def eda():
                 "data": [
                     {
                         "category": str(category),
-                        **{str(label): int(grouped.loc[category, label]) for label in grouped.columns},
+                        **{str(label): int(grouped.get(label, {}).get(category, 0)) for label in grouped.columns},
                     }
                     for category in top_values
                 ],

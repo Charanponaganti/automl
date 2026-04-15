@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import "Layout.css"
+import "./Layout.css"
 
 
 const NAV_ITEMS = [
@@ -40,14 +40,25 @@ export default function Layout({ children }) {
     <>
 
       <nav className="layout-nav">
-        {/* Wordmark */}
-        <div className="nav-wordmark" onClick={() => go("/")}>
-          <div className="nav-logo-box">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-            </svg>
+        {/* Wordmark and Hamburger */}
+        <div className="nav-left">
+          <div className="nav-wordmark" onClick={() => go("/")}>
+            <div className="nav-logo-box">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+              </svg>
+            </div>
+            <span className="nav-wordmark-text">Auto<span>ML</span></span>
           </div>
-          <span className="nav-wordmark-text">Auto<span>ML</span></span>
+
+          {/* Hamburger */}
+          <button
+            className={`nav-hamburger${open ? " open" : ""}`}
+            onClick={() => setOpen(v => !v)}
+            aria-label="Toggle menu"
+          >
+            <span /><span /><span />
+          </button>
         </div>
 
         {/* Desktop links */}
@@ -64,15 +75,6 @@ export default function Layout({ children }) {
             </div>
           ))}
         </div>
-
-        {/* Hamburger */}
-        <button
-          className={`nav-hamburger${open ? " open" : ""}`}
-          onClick={() => setOpen(v => !v)}
-          aria-label="Toggle menu"
-        >
-          <span /><span /><span />
-        </button>
       </nav>
 
       {/* Mobile drawer */}

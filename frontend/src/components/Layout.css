@@ -59,6 +59,15 @@ body {
   opacity: 0.5;
 }
 
+/* ── Nav left (wordmark + hamburger) ── */
+.nav-left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 /* ── Wordmark ── */
 .nav-wordmark {
   display: flex;
@@ -169,22 +178,26 @@ body {
   flex-direction: column;
   gap: 4px;
   cursor: pointer;
-  padding: 4px;
+  padding: 6px;
   background: none;
-  border: none;
+  border: 1px solid rgba(99, 210, 179, 0.3);
+  border-radius: 6px;
   flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.nav-hamburger:hover {
+  background: rgba(99, 210, 179, 0.1);
+  border-color: rgba(99, 210, 179, 0.5);
 }
 
 .nav-hamburger span {
   display: block;
-  width: 20px;
+  width: 16px;
   height: 1.5px;
   background: var(--text-muted);
   border-radius: 999px;
-  transition:
-    transform 0.25s,
-    opacity 0.25s,
-    background 0.2s;
+  transition: all 0.3s ease;
 }
 
 .nav-hamburger.open span:nth-child(1) {

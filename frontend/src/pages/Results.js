@@ -264,7 +264,7 @@ export default function Results() {
                     } catch (e) {
                       console.error("Reset failed", e);
                     }
-                    navigate("/", { replace: true });
+                    navigate("/upload", { replace: true });
                   }}
                 >
                   <svg

@@ -444,7 +444,11 @@ function OutlierPanel({ outliers, numRows }) {
   const totalOutliers = Object.values(outliers).reduce((a, b) => a + b, 0);
 
   return (
-    <div className="section" id="outlier-detection" style={{ animationDelay: "0.13s" }}>
+    <div
+      className="section"
+      id="outlier-detection"
+      style={{ animationDelay: "0.13s" }}
+    >
       <div className="section-label">
         Outlier Detection
         {totalOutliers > 0 && (
@@ -513,7 +517,11 @@ function OutlierPanel({ outliers, numRows }) {
 function RedundantFeaturesPanel({ features }) {
   if (!features || features.length === 0) return null;
   return (
-    <div className="section" id="redundant-features" style={{ animationDelay: "0.14s" }}>
+    <div
+      className="section"
+      id="redundant-features"
+      style={{ animationDelay: "0.14s" }}
+    >
       <div className="section-label">Redundant Features</div>
       <div className="panel">
         <div className="panel-bar" />
@@ -545,7 +553,11 @@ function BoxPlotPanel({ boxPlots, onCardExpand }) {
   if (!boxPlots || Object.keys(boxPlots).length === 0) return null;
   const cols = Object.entries(boxPlots);
   return (
-    <div className="section enlargeable-section" id="box-plots" style={{ animationDelay: "0.15s" }}>
+    <div
+      className="section enlargeable-section"
+      id="box-plots"
+      style={{ animationDelay: "0.15s" }}
+    >
       <div className="section-label">Box Plots · Outlier Summary</div>
       <div className="boxplot-grid">
         {cols.map(([col, stats]) => {
@@ -587,16 +599,25 @@ function BoxPlotPanel({ boxPlots, onCardExpand }) {
                           />
                           <div
                             className="boxplot-box"
-                            style={{ left: `${q1Pos}%`, width: `${Math.max(q3Pos - q1Pos, 1)}%` }}
+                            style={{
+                              left: `${q1Pos}%`,
+                              width: `${Math.max(q3Pos - q1Pos, 1)}%`,
+                            }}
                           />
-                          <div className="boxplot-median" style={{ left: `${medianPos}%` }} />
+                          <div
+                            className="boxplot-median"
+                            style={{ left: `${medianPos}%` }}
+                          />
                           {stats.outliers.map((value, index) => {
-                            const pointPos = ((value - stats.min) / range) * 100;
+                            const pointPos =
+                              ((value - stats.min) / range) * 100;
                             return (
                               <div
                                 key={`${col}-outlier-${index}`}
                                 className="boxplot-outlier"
-                                style={{ left: `${Math.min(Math.max(pointPos, 0), 100)}%` }}
+                                style={{
+                                  left: `${Math.min(Math.max(pointPos, 0), 100)}%`,
+                                }}
                               />
                             );
                           })}
@@ -610,7 +631,8 @@ function BoxPlotPanel({ boxPlots, onCardExpand }) {
                         </div>
                         {stats.outlier_count > 0 && (
                           <div className="boxplot-outlier-summary">
-                            {stats.outlier_count} outlier{stats.outlier_count !== 1 ? "s" : ""}
+                            {stats.outlier_count} outlier
+                            {stats.outlier_count !== 1 ? "s" : ""}
                           </div>
                         )}
                       </div>
@@ -640,16 +662,24 @@ function BoxPlotPanel({ boxPlots, onCardExpand }) {
                 />
                 <div
                   className="boxplot-box"
-                  style={{ left: `${q1Pos}%`, width: `${Math.max(q3Pos - q1Pos, 1)}%` }}
+                  style={{
+                    left: `${q1Pos}%`,
+                    width: `${Math.max(q3Pos - q1Pos, 1)}%`,
+                  }}
                 />
-                <div className="boxplot-median" style={{ left: `${medianPos}%` }} />
+                <div
+                  className="boxplot-median"
+                  style={{ left: `${medianPos}%` }}
+                />
                 {stats.outliers.map((value, index) => {
                   const pointPos = ((value - stats.min) / range) * 100;
                   return (
                     <div
                       key={`${col}-outlier-${index}`}
                       className="boxplot-outlier"
-                      style={{ left: `${Math.min(Math.max(pointPos, 0), 100)}%` }}
+                      style={{
+                        left: `${Math.min(Math.max(pointPos, 0), 100)}%`,
+                      }}
                     />
                   );
                 })}
@@ -663,7 +693,8 @@ function BoxPlotPanel({ boxPlots, onCardExpand }) {
               </div>
               {stats.outlier_count > 0 && (
                 <div className="boxplot-outlier-summary">
-                  {stats.outlier_count} outlier{stats.outlier_count !== 1 ? "s" : ""}
+                  {stats.outlier_count} outlier
+                  {stats.outlier_count !== 1 ? "s" : ""}
                 </div>
               )}
             </div>
@@ -674,9 +705,18 @@ function BoxPlotPanel({ boxPlots, onCardExpand }) {
   );
 }
 
-function TargetDistributionPanel({ targetColumn, distribution, targetType, onCardExpand }) {
-  if (!targetColumn || !distribution || Object.keys(distribution).length === 0) return null;
-  const chartData = Object.entries(distribution).map(([name, value]) => ({ name, value }));
+function TargetDistributionPanel({
+  targetColumn,
+  distribution,
+  targetType,
+  onCardExpand,
+}) {
+  if (!targetColumn || !distribution || Object.keys(distribution).length === 0)
+    return null;
+  const chartData = Object.entries(distribution).map(([name, value]) => ({
+    name,
+    value,
+  }));
   const handleExpand = () =>
     onCardExpand?.(
       `Target Distribution · ${targetColumn}`,
@@ -713,8 +753,10 @@ function TargetDistributionPanel({ targetColumn, distribution, targetType, onCar
     >
       <div className="section-label">
         Target Distribution · {targetColumn}
-        <span style={{ color: TEXT_MUT, fontSize: 10, letterSpacing: '0.15em' }}>
-          {targetType === 'classification' ? 'labels' : 'numeric'}
+        <span
+          style={{ color: TEXT_MUT, fontSize: 10, letterSpacing: "0.15em" }}
+        >
+          {targetType === "classification" ? "labels" : "numeric"}
         </span>
       </div>
       <div className="chart-grid">
@@ -755,7 +797,12 @@ function TargetDistributionPanel({ targetColumn, distribution, targetType, onCar
 }
 
 function CategoricalTargetPanel({ targetColumn, distributions, onCardExpand }) {
-  if (!targetColumn || !distributions || Object.keys(distributions).length === 0) return null;
+  if (
+    !targetColumn ||
+    !distributions ||
+    Object.keys(distributions).length === 0
+  )
+    return null;
   return (
     <div
       className="section enlargeable-section"
@@ -833,10 +880,18 @@ function CategoricalTargetPanel({ targetColumn, distributions, onCardExpand }) {
                   data={info.data}
                   margin={{ top: 0, right: 0, bottom: 0, left: -10 }}
                 >
-                  <CartesianGrid strokeDasharray="2 4" stroke={BORDER} vertical={false} />
+                  <CartesianGrid
+                    strokeDasharray="2 4"
+                    stroke={BORDER}
+                    vertical={false}
+                  />
                   <XAxis
                     dataKey="category"
-                    tick={{ fill: TEXT_MUT, fontSize: 9, fontFamily: "'DM Mono'" }}
+                    tick={{
+                      fill: TEXT_MUT,
+                      fontSize: 9,
+                      fontFamily: "'DM Mono'",
+                    }}
                     axisLine={false}
                     tickLine={false}
                     interval={0}
@@ -845,7 +900,11 @@ function CategoricalTargetPanel({ targetColumn, distributions, onCardExpand }) {
                     height={60}
                   />
                   <YAxis
-                    tick={{ fill: TEXT_MUT, fontSize: 9, fontFamily: "'DM Mono'" }}
+                    tick={{
+                      fill: TEXT_MUT,
+                      fontSize: 9,
+                      fontFamily: "'DM Mono'",
+                    }}
                     axisLine={false}
                     tickLine={false}
                   />
@@ -871,6 +930,12 @@ function CategoricalTargetPanel({ targetColumn, distributions, onCardExpand }) {
 }
 
 // ── Scatter Plots for top correlated pairs ────────────────────────────────────
+
+const renderCustomDot = (props) => {
+  const { cx, cy, fill } = props;
+
+  return <circle cx={cx} cy={cy} r={2} fill={fill} fillOpacity={0.45} />;
+};
 function ScatterPairs({
   correlation,
   scatterData,
@@ -897,105 +962,12 @@ function ScatterPairs({
   if (topPairs.length === 0) return null;
 
   return (
-    <div className="section enlargeable-section" id="scatter-plots" style={{ animationDelay: "0.16s" }}>
-      <div className="section-label">
-        Scatter Plots · Top Correlated Pairs
-        <button
-          type="button"
-          className="expand-btn"
-          onClick={(e) => {
-            e.stopPropagation();
-            onCardExpand?.(
-              "Scatter Plots",
-              <div style={{ width: "100%", minHeight: 520 }}>
-                <div className="chart-grid">
-                  {topPairs.map(({ colA, colB, corr }) => {
-                    const key = [colA, colB].sort().join("__");
-                    const corrAbs = Math.abs(corr);
-                    const chartPoints =
-                      scatterData?.[`${colA}__${colB}`] ||
-                      scatterData?.[`${colB}__${colA}`] ||
-                      [];
-                    return (
-                      <div className="chart-card" key={key}>
-                        <div className={`chart-card-bar ${corrAbs > 0.7 ? (corr > 0 ? "" : "red") : "gold"}`} />
-                        <div className="chart-card-body">
-                          <div className="scatter-pair-header">
-                            <div className="scatter-pair-cols">
-                              <div className={`chart-col-dot ${corrAbs > 0.7 ? (corr > 0 ? "" : "red") : "gold"}`} />
-                              <span>{colA}</span>
-                              <span style={{ color: TEXT_MUT, fontSize: 9 }}>vs</span>
-                              <span>{colB}</span>
-                            </div>
-                            <span className="scatter-corr-badge" style={{ color: corrAbs > 0.7 ? (corr > 0 ? ACCENT : RED) : TEXT_DIM, borderColor: corrAbs > 0.7 ? (corr > 0 ? "rgba(99,210,179,0.4)" : "rgba(248,113,113,0.4)") : "rgba(255,255,255,0.1)" }}>
-                              r = {corr.toFixed(3)}
-                            </span>
-                          </div>
-                          {chartPoints.length > 0 ? (
-                            <ResponsiveContainer width="100%" height={260}>
-                              <ScatterChart margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
-                                <CartesianGrid strokeDasharray="2 4" stroke={BORDER} />
-                                <XAxis
-                                  dataKey="x"
-                                  type="number"
-                                  name={colA}
-                                  tick={{ fill: TEXT_MUT, fontSize: 9, fontFamily: "'DM Mono'" }}
-                                  axisLine={false}
-                                  tickLine={false}
-                                />
-                                <YAxis
-                                  dataKey="y"
-                                  type="number"
-                                  name={colB}
-                                  tick={{ fill: TEXT_MUT, fontSize: 9, fontFamily: "'DM Mono'" }}
-                                  axisLine={false}
-                                  tickLine={false}
-                                />
-                                <ZAxis range={[18, 18]} />
-                                <Tooltip
-                                  cursor={{ strokeDasharray: "3 3", stroke: BORDER }}
-                                  content={({ active, payload }) => {
-                                    if (!active || !payload?.length) return null;
-                                    const d = payload[0]?.payload;
-                                    return (
-                                      <div style={{ background: "#111318", border: "1px solid rgba(99,210,179,0.25)", borderRadius: 2, padding: "8px 14px", fontFamily: "'DM Mono',monospace", fontSize: 11 }}>
-                                        <div style={{ color: TEXT_MUT, fontSize: 10, marginBottom: 3 }}>
-                                          {colA}: <span style={{ color: ACCENT }}>{d?.x?.toFixed(3)}</span>
-                                        </div>
-                                        <div style={{ color: TEXT_MUT, fontSize: 10 }}>
-                                          {colB}: <span style={{ color: VIOLET }}>{d?.y?.toFixed(3)}</span>
-                                        </div>
-                                      </div>
-                                    );
-                                  }}
-                                />
-                                <Scatter
-                                  data={chartPoints}
-                                  fill={corrAbs > 0.7 ? (corr > 0 ? ACCENT : RED) : GOLD}
-                                  fillOpacity={0.45}
-                                  line={{ strokeWidth: 0.5 }}
-                                  shape="circle"
-                                  size={4}
-                                />
-                              </ScatterChart>
-                            </ResponsiveContainer>
-                          ) : (
-                            <div style={{ height: 180, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--mono)", fontSize: 10, color: TEXT_MUT }}>
-                              No sample data available
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>,
-            );
-          }}
-        >
-          Expand
-        </button>
-      </div>
+    <div
+      className="section enlargeable-section"
+      id="scatter-plots"
+      style={{ animationDelay: "0.16s" }}
+    >
+      <div className="section-label">Scatter Plots · Top Correlated Pairs</div>
       <div className="chart-grid">
         {topPairs.map(({ colA, colB, corr }) => {
           const key = [colA, colB].sort().join("__");
@@ -1032,12 +1004,15 @@ function ScatterPairs({
                   `Scatter • ${colA} vs ${colB}`,
                   <div style={{ width: "100%", minHeight: 420 }}>
                     <ResponsiveContainer width="100%" height={360}>
-                      <ScatterChart margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
+                      <ScatterChart
+                        margin={{ top: 0, right: 0, bottom: 0, left: -20 }}
+                      >
                         <CartesianGrid strokeDasharray="2 4" stroke={BORDER} />
                         <XAxis
                           dataKey="x"
                           type="number"
                           name={colA}
+                          padding={{ right: 20 }}
                           tick={{
                             fill: TEXT_MUT,
                             fontSize: 9,
@@ -1058,7 +1033,7 @@ function ScatterPairs({
                           axisLine={false}
                           tickLine={false}
                         />
-                        <ZAxis range={[18, 18]} />
+                        <ZAxis range={[1, 1]} />
                         <Tooltip
                           cursor={{ strokeDasharray: "3 3", stroke: BORDER }}
                           content={({ active, payload }) => {
@@ -1082,10 +1057,16 @@ function ScatterPairs({
                                     marginBottom: 3,
                                   }}
                                 >
-                                  {colA}: <span style={{ color: ACCENT }}>{d?.x?.toFixed(3)}</span>
+                                  {colA}:{" "}
+                                  <span style={{ color: ACCENT }}>
+                                    {d?.x?.toFixed(3)}
+                                  </span>
                                 </div>
                                 <div style={{ color: TEXT_MUT, fontSize: 10 }}>
-                                  {colB}: <span style={{ color: VIOLET }}>{d?.y?.toFixed(3)}</span>
+                                  {colB}:{" "}
+                                  <span style={{ color: VIOLET }}>
+                                    {d?.y?.toFixed(3)}
+                                  </span>
                                 </div>
                               </div>
                             );
@@ -1093,11 +1074,11 @@ function ScatterPairs({
                         />
                         <Scatter
                           data={chartPoints}
-                          fill={corrAbs > 0.7 ? (corr > 0 ? ACCENT : RED) : GOLD}
+                          fill={
+                            corrAbs > 0.7 ? (corr > 0 ? ACCENT : RED) : GOLD
+                          }
                           fillOpacity={0.45}
-                          line={{ strokeWidth: 0.5 }}
-                          shape="circle"
-                          size={4}
+                          shape={renderCustomDot}
                         />
                       </ScatterChart>
                     </ResponsiveContainer>
@@ -1160,6 +1141,7 @@ function ScatterPairs({
                         dataKey="x"
                         type="number"
                         name={colA}
+                        padding={{ right: 20 }}
                         tick={{
                           fill: TEXT_MUT,
                           fontSize: 9,
@@ -1180,7 +1162,7 @@ function ScatterPairs({
                         axisLine={false}
                         tickLine={false}
                       />
-                      <ZAxis range={[18, 18]} />
+                      <ZAxis range={[1, 1]} />
                       <Tooltip
                         cursor={{ strokeDasharray: "3 3", stroke: BORDER }}
                         content={({ active, payload }) => {
@@ -1223,9 +1205,7 @@ function ScatterPairs({
                         data={chartPoints}
                         fill={corrAbs > 0.7 ? (corr > 0 ? ACCENT : RED) : GOLD}
                         fillOpacity={0.45}
-                        line={{ strokeWidth: 0.5 }}
-                        shape="circle"
-                        size={4}
+                        shape={renderCustomDot}
                       />
                     </ScatterChart>
                   </ResponsiveContainer>
@@ -1256,7 +1236,11 @@ function ScatterPairs({
 function HistogramPanel({ histograms, onCardExpand }) {
   if (!histograms || Object.keys(histograms).length === 0) return null;
   return (
-    <div className="section enlargeable-section" id="histograms" style={{ animationDelay: "0.17s" }}>
+    <div
+      className="section enlargeable-section"
+      id="histograms"
+      style={{ animationDelay: "0.17s" }}
+    >
       <div className="section-label">Histograms</div>
       <div className="chart-grid">
         {Object.entries(histograms).map(([col, values]) => (
@@ -1350,11 +1334,7 @@ function HistogramPanel({ histograms, onCardExpand }) {
                     content={<ChartTooltip />}
                     cursor={{ fill: "rgba(99,210,179,0.06)" }}
                   />
-                  <Bar
-                    dataKey="count"
-                    fill={ACCENT}
-                    radius={[2, 2, 0, 0]}
-                  />
+                  <Bar dataKey="count" fill={ACCENT} radius={[2, 2, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -1368,7 +1348,11 @@ function HistogramPanel({ histograms, onCardExpand }) {
 function CategoricalDistributionPanel({ categorical, onCardExpand }) {
   if (!categorical || Object.keys(categorical).length === 0) return null;
   return (
-    <div className="section enlargeable-section" id="categorical-distribution" style={{ animationDelay: "0.19s" }}>
+    <div
+      className="section enlargeable-section"
+      id="categorical-distribution"
+      style={{ animationDelay: "0.19s" }}
+    >
       <div className="section-label">Categorical Distribution</div>
       <div className="chart-grid">
         {Object.entries(categorical).map(([col, values]) => {
@@ -1444,62 +1428,20 @@ function CategoricalDistributionPanel({ categorical, onCardExpand }) {
   );
 }
 
-function CorrelationMatrixPanel({ correlation, selectedPair, onSelectPair, onCardExpand }) {
+function CorrelationMatrixPanel({
+  correlation,
+  selectedPair,
+  onSelectPair,
+  onCardExpand,
+}) {
   if (!correlation || Object.keys(correlation).length === 0) return null;
   return (
-    <div className="section enlargeable-section" id="correlation-matrix" style={{ animationDelay: "0.21s" }}>
-      <div className="section-label">
-        Correlation Matrix
-        <button
-          type="button"
-          className="expand-btn"
-          onClick={(e) => {
-            e.stopPropagation();
-            onCardExpand?.(
-              "Correlation Matrix",
-              <div style={{ width: "100%", minHeight: 520 }}>
-                <div className="panel">
-                  <div className="panel-bar gold" />
-                  <div className="panel-body">
-                    <div className="corr-scroll">
-                      <table className="corr-table">
-                        <thead>
-                          <tr>
-                            <th />
-                            {Object.keys(correlation).map((col) => (
-                              <th key={col}>{col}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {Object.entries(correlation).map(([row, cols]) => (
-                            <tr key={row}>
-                              <th>{row}</th>
-                              {Object.entries(cols).map(([col, val], i) => (
-                                <td
-                                  key={i}
-                                  style={{
-                                    background: corrColor(val),
-                                    color: Math.abs(val) > 0.5 ? "#e8eaf0" : TEXT_DIM,
-                                  }}
-                                >
-                                  {val.toFixed(2)}
-                                </td>
-                              ))}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              </div>,
-            );
-          }}
-        >
-          Expand
-        </button>
-      </div>
+    <div
+      className="section enlargeable-section"
+      id="correlation-matrix"
+      style={{ animationDelay: "0.21s" }}
+    >
+      <div className="section-label">Correlation Matrix</div>
       <div className="panel">
         <div className="panel-bar gold" />
         <div className="panel-body">
@@ -1526,10 +1468,7 @@ function CorrelationMatrixPanel({ correlation, selectedPair, onSelectPair, onCar
                           className={isSelected ? "selected" : ""}
                           style={{
                             background: corrColor(val),
-                            color:
-                              Math.abs(val) > 0.5
-                                ? "#e8eaf0"
-                                : TEXT_DIM,
+                            color: Math.abs(val) > 0.5 ? "#e8eaf0" : TEXT_DIM,
                             cursor: row !== col ? "pointer" : "default",
                           }}
                           onClick={() => {
@@ -1552,7 +1491,8 @@ function CorrelationMatrixPanel({ correlation, selectedPair, onSelectPair, onCar
                                       color: TEXT_MUT,
                                     }}
                                   >
-                                    Correlation for {row} vs {col}: {val.toFixed(3)}
+                                    Correlation for {row} vs {col}:{" "}
+                                    {val.toFixed(3)}
                                   </div>
                                   <div className="panel">
                                     <div className="panel-bar gold" />
@@ -1565,11 +1505,15 @@ function CorrelationMatrixPanel({ correlation, selectedPair, onSelectPair, onCar
                                         }}
                                       >
                                         <div>
-                                          <div className="summary-stat-key">Row</div>
+                                          <div className="summary-stat-key">
+                                            Row
+                                          </div>
                                           <div>{row}</div>
                                         </div>
                                         <div>
-                                          <div className="summary-stat-key">Column</div>
+                                          <div className="summary-stat-key">
+                                            Column
+                                          </div>
                                           <div>{col}</div>
                                         </div>
                                       </div>
@@ -1598,7 +1542,11 @@ function CorrelationMatrixPanel({ correlation, selectedPair, onSelectPair, onCar
 function FeatureImportancePanel({ featureImportance, onCardExpand }) {
   if (!featureImportance || featureImportance.length === 0) return null;
   return (
-    <div className="section enlargeable-section" id="feature-importance" style={{ animationDelay: "0.25s" }}>
+    <div
+      className="section enlargeable-section"
+      id="feature-importance"
+      style={{ animationDelay: "0.25s" }}
+    >
       <div className="section-label">Feature Importance</div>
       <div
         className="panel clickable"
@@ -1646,11 +1594,7 @@ function FeatureImportancePanel({ featureImportance, onCardExpand }) {
                     content={<ChartTooltip />}
                     cursor={{ fill: "rgba(167,139,250,0.06)" }}
                   />
-                  <Bar
-                    dataKey="value"
-                    fill={VIOLET}
-                    radius={[0, 2, 2, 0]}
-                  />
+                  <Bar dataKey="value" fill={VIOLET} radius={[0, 2, 2, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>,
@@ -1700,11 +1644,7 @@ function FeatureImportancePanel({ featureImportance, onCardExpand }) {
                 content={<ChartTooltip />}
                 cursor={{ fill: "rgba(167,139,250,0.06)" }}
               />
-              <Bar
-                dataKey="value"
-                fill={VIOLET}
-                radius={[0, 2, 2, 0]}
-              />
+              <Bar dataKey="value" fill={VIOLET} radius={[0, 2, 2, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -1723,7 +1663,11 @@ function MLReadinessPanel({ data }) {
   const scoreColor = score >= 80 ? ACCENT : score >= 50 ? GOLD : RED;
 
   return (
-    <div className="section" id="ml-readiness" style={{ animationDelay: "0.22s" }}>
+    <div
+      className="section"
+      id="ml-readiness"
+      style={{ animationDelay: "0.30s" }}
+    >
       <div className="section-label">
         ML Readiness
         <span
@@ -1960,14 +1904,16 @@ function MLReadinessPanel({ data }) {
   );
 }
 
-const SidebarNav = ({ sections, activeSection, sidebarOpen, setSidebarOpen }) => {
+const SidebarNav = ({
+  sections,
+  activeSection,
+  sidebarOpen,
+  setSidebarOpen,
+}) => {
   return (
     <>
       {sidebarOpen && (
-        <div
-          className="eda-overlay"
-          onClick={() => setSidebarOpen(false)}
-        />
+        <div className="eda-overlay" onClick={() => setSidebarOpen(false)} />
       )}
 
       <aside className={`eda-sidebar ${sidebarOpen ? "open" : ""}`}>
@@ -1985,14 +1931,15 @@ const SidebarNav = ({ sections, activeSection, sidebarOpen, setSidebarOpen }) =>
           {sections.map((section) => (
             <button
               key={section.id}
-              className={`eda-sidebar-link ${activeSection === section.id ? "active" : ""
-                }`}
-              onClick={() => {
+              className={`eda-sidebar-link ${
+                activeSection === section.id ? "active" : ""
+              }`}
+              onClick={(e) => {
+                e.stopPropagation();
                 const el = document.getElementById(section.id);
                 if (el) {
                   el.scrollIntoView({ behavior: "smooth", block: "start" });
                 }
-                setSidebarOpen(false);
               }}
             >
               {section.label}
@@ -2004,18 +1951,20 @@ const SidebarNav = ({ sections, activeSection, sidebarOpen, setSidebarOpen }) =>
   );
 };
 
-
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function EDA() {
   const navSections = useMemo(
     () => [
       { id: "sample-data", label: "Sample Data" },
+      { id: "outlier-detection", label: "Outliers and Box Plots" },
+      { id: "ml-readiness", label: "ML Readiness" },
+      { id: "histograms", label: "Histograms" },
+      { id: "categorical-distribution", label: "Categorical Distribution" },
+      { id: "correlation-matrix", label: "Correlation Matrix" },
+      { id: "scatter-plots", label: "Scatter" },
+      { id: "feature-importance", label: "Feature Importance" },
       { id: "missing-values", label: "Missing Values" },
       { id: "summary-statistics", label: "Summary" },
-      { id: "histograms", label: "Histograms" },
-      { id: "scatter-plots", label: "Scatter" },
-      { id: "box-plots", label: "Box Plots" },
-      { id: "outlier-detection", label: "Outliers" },
     ],
     [],
   );
@@ -2023,12 +1972,23 @@ export default function EDA() {
     const handleScroll = () => {
       const offset = window.scrollY + window.innerHeight * 0.3;
 
+      // Get all sections and sort by offsetTop to match actual page order
+      const sectionsWithOffset = navSections
+        .map((section) => ({
+          id: section.id,
+          el: document.getElementById(section.id),
+        }))
+        .filter((s) => s.el)
+        .sort((a, b) => a.el.offsetTop - b.el.offsetTop);
+
       let current = navSections[0]?.id;
 
-      for (let section of navSections) {
-        const el = document.getElementById(section.id);
-        if (el && el.offsetTop <= offset) {
+      // Find the section closest to the current scroll position
+      for (let section of sectionsWithOffset) {
+        if (section.el.offsetTop <= offset) {
           current = section.id;
+        } else {
+          break; // Stop at first section below offset
         }
       }
 
@@ -2040,7 +2000,6 @@ export default function EDA() {
 
     return () => window.removeEventListener("scroll", handleScroll);
   }, [navSections]);
-
 
   const [data, setData] = useState(null);
   const [trainRes, setTrainRes] = useState(null);
@@ -2064,7 +2023,7 @@ export default function EDA() {
     }
   }, []);
 
-  const openExpanded = (sectionId) => setExpandedSection(sectionId);
+  //const openExpanded = (sectionId) => setExpandedSection(sectionId);
   const openChart = (title, content) => setExpandedChart({ title, content });
   const closeExpanded = () => {
     setExpandedSection(null);
@@ -2083,13 +2042,13 @@ export default function EDA() {
       .catch((err) =>
         setError(err.response?.data?.detail || "Failed to load EDA data."),
       );
-  }, [navSections]);
+  }, []);
 
   useEffect(() => {
     axios
       .get(`${API}/model_info`)
       .then((res) => setTrainRes(res.data))
-      .catch(() => { });
+      .catch(() => {});
   }, [navSections]);
 
   // Filtered columns
@@ -2131,130 +2090,11 @@ export default function EDA() {
       .slice(0, 10)
       .map(([name, value]) => ({ name, value }));
   }, [data?.importance, categoricalCols]);
-
-  // const navSections = useMemo(
-  //   () => [
-  //     { id: "sample-data", label: "Sample Data" },
-  //     { id: "target-distribution", label: "Target Distribution" },
-  //     { id: "categorical-vs-target", label: "Categorical vs Target" },
-  //     { id: "outlier-detection", label: "Outlier Detection" },
-  //     { id: "box-plots", label: "Box Plots" },
-  //     { id: "histograms", label: "Histograms" },
-  //     { id: "categorical-distribution", label: "Categorical Distribution" },
-  //     { id: "correlation-matrix", label: "Correlation Matrix" },
-  //     { id: "scatter-plots", label: "Scatter Plots" },
-  //     { id: "feature-importance", label: "Feature Importance" },
-  //     { id: "redundant-features", label: "Redundant Features" },
-  //     { id: "missing-values", label: "Missing Values" },
-  //     { id: "ml-readiness", label: "ML Readiness" },
-  //     { id: "summary-statistics", label: "Summary Statistics" },
-  //   ],
-  //   [],
-  // );
-
-  /*
-  const SidebarNav = ({ sections, activeSection, sidebarOpen, setSidebarOpen }) => {
-    return (
-      <>
-        {sidebarOpen && (
-          <div
-            className="eda-overlay"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
-
-        <aside className={`eda-sidebar ${sidebarOpen ? "open" : ""}`}>
-          <div className="eda-sidebar-header">
-            <span>Navigation</span>
-            <button
-              className="eda-sidebar-close"
-              onClick={() => setSidebarOpen(false)}
-            >
-              ×
-            </button>
-          </div>
-
-          <div className="eda-sidebar-body">
-            {sections.map((section) => (
-              <button
-                key={section.id}
-                className={`eda-sidebar-link ${activeSection === section.id ? "active" : ""
-                  }`}
-                onClick={() => {
-                  const el = document.getElementById(section.id);
-                  if (el) {
-                    el.scrollIntoView({ behavior: "smooth", block: "start" });
-                  }
-                  setSidebarOpen(false);
-                }}
-              >
-                {section.label}
-              </button>
-            ))}
-          </div>
-        </aside>
-      </>
-    );
-  };*/
-  /*
-    useEffect(() => {
-      const handleScroll = () => {
-        const offset = window.scrollY + 120;
-        let current = navSections[0]?.id || "sample-data";
-        navSections.forEach((section) => {
-          const element = document.getElementById(section.id);
-          if (element && element.offsetTop <= offset) {
-            current = section.id;
-          }
-        });
-        setActiveSection(current);
-      };
+  const targetColumn = data?.target_column;
+  const targetType = data?.target_type;
+  const targetDistribution = data?.target_distribution || {};
+  const categoricalTargetDistribution =data?.categorical_target_distribution || {};
   
-      handleScroll();
-      window.addEventListener("scroll", handleScroll, { passive: true });
-      return () => window.removeEventListener("scroll", handleScroll);
-    }, [navSections]);
-  
-    const handleNavSelect = (id) => {
-      const target = document.getElementById(id);
-      if (target) {
-        target.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
-    };
-  
-    const SidebarNav = ({ sections, activeSection, onSelect, onClose }) => (
-      <aside className={`eda-sidebar ${sidebarOpen ? "open" : "closed"}`} aria-label="EDA navigation">
-        <div className="eda-sidebar-header">
-          <span>Index</span>
-          <button
-            type="button"
-            className="eda-sidebar-close"
-            onClick={onClose}
-            aria-label="Hide index"
-          >
-            ×
-          </button>
-        </div>
-        <div className="eda-sidebar-body">
-          <div className="eda-sidebar-copy">
-            Jump directly to the most important analysis sections.
-          </div>
-          <nav className="eda-sidebar-links" aria-label="EDA sections">
-            {sections.map((section) => (
-              <button
-                type="button"
-                key={section.id}
-                className={`eda-sidebar-link ${activeSection === section.id ? "active" : ""}`}
-                onClick={() => onSelect(section.id)}
-              >
-                {section.label}
-              </button>
-            ))}
-          </nav>
-        </div>
-      </aside>
-    );
-  */
   const renderExpandedSection = () => {
     if (!expandedSection) return null;
     switch (expandedSection) {
@@ -2276,11 +2116,23 @@ export default function EDA() {
           />
         );
       case "box-plots":
-        return <BoxPlotPanel boxPlots={data.box_plots} onCardExpand={openChart} />;
+        return (
+          <BoxPlotPanel boxPlots={data.box_plots} onCardExpand={openChart} />
+        );
       case "histograms":
-        return <HistogramPanel histograms={data.histograms} onCardExpand={openChart} />;
+        return (
+          <HistogramPanel
+            histograms={data.histograms}
+            onCardExpand={openChart}
+          />
+        );
       case "categorical-distribution":
-        return <CategoricalDistributionPanel categorical={data.categorical} onCardExpand={openChart} />;
+        return (
+          <CategoricalDistributionPanel
+            categorical={data.categorical}
+            onCardExpand={openChart}
+          />
+        );
       case "correlation-matrix":
         return (
           <CorrelationMatrixPanel
@@ -2380,10 +2232,7 @@ export default function EDA() {
     (a, b) => a + b,
     0,
   );
-  const targetColumn = data.target_column;
-  const targetType = data.target_type;
-  const targetDistribution = data.target_distribution || {};
-  const categoricalTargetDistribution = data.categorical_target_distribution || {};
+  
 
   return (
     <Layout>
@@ -2404,7 +2253,9 @@ export default function EDA() {
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
         />
-        <div className={`eda-content ${sidebarOpen ? "with-sidebar" : "no-sidebar"}`}>
+        <div
+          className={`eda-content ${sidebarOpen ? "with-sidebar" : "no-sidebar"}`}
+        >
           {(expandedSection || expandedChart) && (
             <ExpandOverlay
               title={expandedChart?.title || "Expanded Graph"}
@@ -2435,7 +2286,6 @@ export default function EDA() {
                   </span>
                 )}
               </h1>
-
             </div>
           </div>
 
@@ -2598,7 +2448,11 @@ export default function EDA() {
           </div>
 
           {/* ── Sample ── */}
-          <div className="section" id="sample-data" style={{ animationDelay: "0.08s" }}>
+          <div
+            className="section"
+            id="sample-data"
+            style={{ animationDelay: "0.08s" }}
+          >
             <div className="section-label">Sample Data</div>
             <div className="panel">
               <div className="panel-bar" />
@@ -2653,15 +2507,17 @@ export default function EDA() {
           <MLReadinessPanel data={data} />
 
           {/* ── Histograms ── */}
-          {data.histograms && numericCols.length > 0 && Object.keys(data.histograms).length > 0 && (
-            <HistogramPanel
-              histograms={data.histograms}
-              onCardExpand={openChart}
-            />
-          )}
+          {data.histograms &&
+            numericCols.length > 0 &&
+            Object.keys(data.histograms).length > 0 && (
+              <HistogramPanel
+                histograms={data.histograms}
+                onCardExpand={openChart}
+              />
+            )}
 
           {/* ── Categorical pie charts ── */}
-          {data.categorical && categoricalCols.length > 0 && Object.keys(data.categorical).length > 0 && (
+          {data.categorical && Object.keys(data.categorical).length > 0 && (
             <CategoricalDistributionPanel
               categorical={data.categorical}
               onCardExpand={openChart}
@@ -2696,58 +2552,11 @@ export default function EDA() {
           )}
 
           {/* ── Missing values ── */}
-          <div className="section" id="missing-values" style={{ animationDelay: "0.27s" }}>
-            <div className="section-label">Missing Values</div>
-            <div className="panel">
-              <div className="panel-bar red" />
-              <div className="panel-body">
-                {missingEntries.every(([, v]) => v === 0) ? (
-                  <div
-                    style={{
-                      fontFamily: "var(--mono)",
-                      fontSize: 12,
-                      color: ACCENT,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                    }}
-                  >
-                    <svg
-                      width="13"
-                      height="13"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke={ACCENT}
-                      strokeWidth="2.5"
-                    >
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                    No missing values detected
-                  </div>
-                ) : (
-                  <div className="missing-list">
-                    {missingEntries
-                      .filter(([, v]) => v > 0)
-                      .map(([col, val]) => (
-                        <div className="missing-row" key={col}>
-                          <div className="missing-col">{col}</div>
-                          <div className="missing-bar-track">
-                            <div
-                              className="missing-bar-fill"
-                              style={{ width: `${(val / maxMissing) * 100}%` }}
-                            />
-                          </div>
-                          <div className="missing-count">{val}</div>
-                        </div>
-                      ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* ── Summary statistics ── */}
-          <div className="section" style={{ animationDelay: "0.27s" }}>
+          <div
+            className="section"
+            id="missing-values"
+            style={{ animationDelay: "0.27s" }}
+          >
             <div className="section-label">Missing Values</div>
             <div className="panel">
               <div className="panel-bar red" />
@@ -2806,44 +2615,46 @@ export default function EDA() {
           />
 
           {/* ── Summary statistics ── */}
-          {
-            data.summary && summaryColNames.length > 0 && (
-              <div className="section" id="summary-statistics" style={{ animationDelay: "0.29s" }}>
-                <div className="section-label">Summary Statistics</div>
-                <div className="summary-grid">
-                  {summaryColNames.map((col) => (
-                    <div className="summary-col-card" key={col}>
-                      <div className="summary-col-name">
-                        <svg
-                          width="9"
-                          height="9"
-                          viewBox="0 0 10 10"
-                          fill={ACCENT}
-                        >
-                          <circle cx="5" cy="5" r="5" />
-                        </svg>
-                        {col}
-                      </div>
-                      {STAT_KEYS.filter(
-                        (k) => data.summary[col]?.[k] !== undefined,
-                      ).map((k) => (
-                        <div className="summary-stat-row" key={k}>
-                          <span className="summary-stat-key">{k}</span>
-                          <span className="summary-stat-val">
-                            {typeof data.summary[col][k] === "number"
-                              ? data.summary[col][k].toFixed(4)
-                              : data.summary[col][k]}
-                          </span>
-                        </div>
-                      ))}
+          {data.summary && summaryColNames.length > 0 && (
+            <div
+              className="section"
+              id="summary-statistics"
+              style={{ animationDelay: "0.29s" }}
+            >
+              <div className="section-label">Summary Statistics</div>
+              <div className="summary-grid">
+                {summaryColNames.map((col) => (
+                  <div className="summary-col-card" key={col}>
+                    <div className="summary-col-name">
+                      <svg
+                        width="9"
+                        height="9"
+                        viewBox="0 0 10 10"
+                        fill={ACCENT}
+                      >
+                        <circle cx="5" cy="5" r="5" />
+                      </svg>
+                      {col}
                     </div>
-                  ))}
-                </div>
+                    {STAT_KEYS.filter(
+                      (k) => data.summary[col]?.[k] !== undefined,
+                    ).map((k) => (
+                      <div className="summary-stat-row" key={k}>
+                        <span className="summary-stat-key">{k}</span>
+                        <span className="summary-stat-val">
+                          {typeof data.summary[col][k] === "number"
+                            ? data.summary[col][k].toFixed(4)
+                            : data.summary[col][k]}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ))}
               </div>
-            )
-          }
+            </div>
+          )}
 
-          {/* ── CTA row ── */}
+          {/* ── Action row ── */}
           <div className="action-row">
             <button className="cta-btn" onClick={() => navigate("/predictor")}>
               <svg
@@ -2879,8 +2690,8 @@ export default function EDA() {
               </button>
             )}
           </div>
-        </div >
-      </div >
-    </Layout >
+        </div>
+      </div>
+    </Layout>
   );
 }
