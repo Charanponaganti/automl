@@ -64,7 +64,7 @@ def _infer_column_types(df: pd.DataFrame):
     return numeric_cols, categorical_cols
 
 
-def _find_redundant_features(df: pd.DataFrame, threshold: float = 0.4):
+def _find_redundant_features(df: pd.DataFrame, threshold: int 15):
     """Return high-cardinality categorical columns only.
 
     Only object/string columns are considered redundant for this rule.
@@ -78,8 +78,8 @@ def _find_redundant_features(df: pd.DataFrame, threshold: float = 0.4):
     for col in df.columns:
         if not pd.api.types.is_string_dtype(df[col]):
             continue
-        unique_ratio = df[col].nunique(dropna=False) / row_count
-        if unique_ratio > threshold:
+        unique = df[col].nunique(dropna=False)
+        if unique > threshold:
             redundant.append(col)
     return redundant
 
