@@ -1,31 +1,46 @@
-
 ---
-title: AutoML Backend API
-emoji: 🤖
-colorFrom: purple
-colorTo: gray
+title: Auto-ML
+emoji: 🚀
+colorFrom: green
+colorTo: blue
 sdk: docker
-sdk_version: "0.0.1"
-python_version: "3.10"
-app_file: Dockerfile
-app_port: 7860
 pinned: false
 ---
 
-# AutoML Backend API
+# 🚀 AutoML Platform
 
-FastAPI-based AutoML service for training and prediction.
+A professional, end-to-end Automated Machine Learning platform powered by FastAPI and React.
 
-## API Endpoints
+## 🖼️ Application Gallery
 
-- `POST /upload` - Upload CSV dataset
-- `POST /train` - Train AutoML model
-- `POST /predict` - Make predictions
-- `GET /eda` - Get exploratory data analysis
-- `GET /model_info` - Get model information
-- `POST /reset` - Reset all state
+<div align="center">
+  <img src="screenshots/01_homepage.png" width="400" alt="Home Page">
+  <img src="screenshots/02_upload.png" width="400" alt="Upload Page">
+  <img src="screenshots/03_results.png" width="400" alt="Results Page">
+  <img src="screenshots/04_eda.png" width="400" alt="EDA Page">
+  <img src="screenshots/05_predictor.png" width="400" alt="Predictor Page">
+  <img src="screenshots/06_feedback.png" width="400" alt="Feedback Form">
+</div>
 
-## Quick Start
+---
 
-Access the API at `/docs` for interactive documentation.
-```
+## ✨ Features
+
+- **Automated Model Training**: Instant evaluation of multiple algorithms and selection of the best performer.
+- **Deep EDA**: Automated exploratory analysis with rich visualizations and outlier detection.
+- **Real-time Predictor**: Interact with trained models through a dynamic form or bulk CSV processing.
+- **Feedback System**: Integrated query system via Resend API (HTTPS).
+
+## 🛠️ Tech Stack
+
+- **Engine**: FastAPI (Python)
+- **UI**: React (Javascript)
+- **ML Core**: Scikit-Learn
+
+## ⚙️ Hugging Face Setup
+
+1. Add your `RESEND_API_KEY` to the **Secrets** section in this Space's settings.
+2. The space will automatically build and run the application.
+
+---
+Created by [Your Portfolio/Profile Name]

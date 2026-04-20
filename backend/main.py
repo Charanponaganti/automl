@@ -9,9 +9,7 @@ import io
 import asyncio
 from concurrent.futures import ThreadPoolExecutor, Future
 import threading
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import requests
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
@@ -58,40 +56,41 @@ class Feedback(BaseModel):
 
 def send_feedback_email(fb: Feedback):
     target_email = "automlquery@gmail.com"
-    smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com").strip()
-    try:
-        smtp_port = int(str(os.getenv("SMTP_PORT", "587")).strip())
-    except:
-        smtp_port = 587
-    smtp_user = os.getenv("SMTP_USER", "").strip()
-    smtp_pass = os.getenv("SMTP_PASSWORD", "").replace(" ", "").strip()
+    api_key = os.getenv("RESEND_API_KEY", "").strip()
 
-    if not smtp_user or not smtp_pass:
-        print("⚠️ SMTP credentials not set. Check your (.env) file.")
+    if not api_key:
+        print("⚠️ RESEND_API_KEY not set. Check your (.env) file.")
+        print(f"Feedback from {fb.name} ({fb.email}): {fb.query}")
         return False
 
     try:
-        msg = MIMEMultipart()
-        msg["From"] = smtp_user
-        msg["To"] = target_email
-        msg["Subject"] = f"AutoML Feedback: {fb.name}"
-
-        body = f"Name: {fb.name}\nEmail: {fb.email}\n\nQuery:\n{fb.query}"
-        msg.attach(MIMEText(body, "plain"))
-
-        print(f"📧 Attempting to send email to {target_email} via {smtp_host}...")
-        with smtplib.SMTP(smtp_host, smtp_port) as server:
-            server.set_debuglevel(0) # Set to 1 for verbose SMTP logs
-            server.starttls()
-            server.login(smtp_user, smtp_pass)
-            server.send_message(msg)
-        print("✅ Email sent successfully!")
-        return True
-    except smtplib.SMTPAuthenticationError:
-        print("❌ SMTP Authentication Failed. Check your email and App Password.")
-        return False
+        print(f"📧 Attempting to send email via Resend API...")
+        
+        # Note: Resend's free tier requires sending from 'onboarding@resend.dev' 
+        # until you verify a custom domain.
+        response = requests.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "from": "AutoML <onboarding@resend.dev>",
+                "to": [target_email],
+                "subject": f"AutoML Feedback: {fb.name}",
+                "text": f"Name: {fb.name}\nEmail: {fb.email}\n\nQuery:\n{fb.query}",
+            }
+        )
+        
+        if response.status_code in [200, 201]:
+            print("✅ Email sent successfully via Resend!")
+            return True
+        else:
+            print(f"❌ Resend API Error: {response.status_code} - {response.text}")
+            return False
+            
     except Exception as e:
-        print(f"❌ Failed to send email: {type(e).__name__} - {e}")
+        print(f"❌ Failed to send email via Resend: {type(e).__name__} - {e}")
         return False
 
 
