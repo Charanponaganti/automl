@@ -56,7 +56,7 @@ A glassmorphic feedback query system integrated with the **Resend API**, ensurin
 
 1. **Clone the Repo**:
    ```bash
-   git clone <repo-url>
+   git clone "https://github.com/Charanponaganti/automl"
    cd automl
    ```
 
