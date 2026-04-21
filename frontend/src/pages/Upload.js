@@ -17,27 +17,27 @@ export default function Upload() {
   const [dragOver, setDragOver] = useState(false);
   const navigate = useNavigate();
 
+  // fetch available sample datasets on mount
   useEffect(() => {
     axios
       .get(`${API}/datasets`)
       .then((res) => setDatasets(res.data.datasets))
       .catch((err) => console.error(err));
   }, []);
+
+  // warn user if they try to close tab while training
   useEffect(() => {
-    const handleBeforeUnload = (e) => {
+    const handler = (e) => {
       if (loading) {
         e.preventDefault();
-        e.returnValue = ""; // required for browser warning
+        e.returnValue = "";
       }
     };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
   }, [loading]);
 
+  // read first line of csv to get column names
   const readCsvHeader = async (file) => {
     try {
       const text = await file.text();
@@ -53,17 +53,17 @@ export default function Upload() {
   };
 
   const handleDatasetChange = async (e) => {
-    const nextDataset = e.target.value;
-    setSelectedDataset(nextDataset);
+    const picked = e.target.value;
+    setSelectedDataset(picked);
     setTarget("");
     setColumns([]);
 
-    if (nextDataset) {
+    if (picked) {
       setFile(null);
       try {
         const res = await axios.post(
           `${API}/load_dataset`,
-          new URLSearchParams({ name: nextDataset }),
+          new URLSearchParams({ name: picked }),
         );
         setColumns(res.data.columns || []);
         setRedundantFeatures(res.data.redundant_features || []);
@@ -83,8 +83,8 @@ export default function Upload() {
       setTarget("");
       setRedundantFeatures([]);
 
-      const fileColumns = await readCsvHeader(f);
-      setColumns(fileColumns);
+      const cols = await readCsvHeader(f);
+      setColumns(cols);
     }
   };
 
@@ -101,33 +101,36 @@ export default function Upload() {
     setLoading(true);
 
     try {
-      let columns;
+      let cols;
 
       if (selectedDataset) {
+        // use the selected sample dataset
         const res = await axios.post(
           `${API}/load_dataset`,
           new URLSearchParams({ name: selectedDataset }),
         );
-        columns = res.data.columns;
-        setColumns(columns);
+        cols = res.data.columns;
+        setColumns(cols);
       } else {
+        // upload the file
         const formData = new FormData();
         formData.append("file", file);
         const res = await axios.post(`${API}/upload`, formData);
-        columns = res.data.columns;
-        setColumns(columns);
+        cols = res.data.columns;
+        setColumns(cols);
         setRedundantFeatures(res.data.redundant_features || []);
       }
 
+      // now train
       const trainRes = await axios.post(
         `${API}/train?target=${encodeURIComponent(target)}`,
       );
 
       const scores = trainRes.data.scores;
 
-      //  SAVE DATA
+      // save to localStorage so other pages can access it
       localStorage.setItem("automl_results", JSON.stringify(scores));
-      localStorage.setItem("automl_columns", JSON.stringify(columns));
+      localStorage.setItem("automl_columns", JSON.stringify(cols));
       localStorage.setItem("automl_target", target);
       localStorage.setItem(
         "automl_types",
@@ -142,9 +145,9 @@ export default function Upload() {
         (selectedDataset || (file ? file.name : "dataset")).replace(/\.[^/.]+$/, ""),
       );
 
-      //  navigate
+      // go to results page
       navigate("/results", {
-        state: { results: scores, columns, target },
+        state: { results: scores, columns: cols, target },
       });
     } catch (err) {
       console.error(err);
@@ -178,7 +181,7 @@ export default function Upload() {
                 </div>
               )}
 
-              {/* File upload */}
+              {/* file upload area */}
               <div>
                 <div className="field-label">Upload CSV</div>
                 <div
@@ -246,7 +249,7 @@ export default function Upload() {
 
               <div className="divider">or</div>
 
-              {/* Dataset picker */}
+              {/* sample dataset picker */}
               <div>
                 <div className="field-label">Sample Dataset</div>
                 <select
@@ -263,7 +266,7 @@ export default function Upload() {
                 </select>
               </div>
 
-              {/* Target column */}
+              {/* target column selector */}
               <div>
                 <div className="field-label">Target Column</div>
 
@@ -295,7 +298,7 @@ export default function Upload() {
                 )}
               </div>
 
-              {/* Submit */}
+              {/* submit button */}
               <button
                 type="submit"
                 disabled={loading}
