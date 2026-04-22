@@ -360,11 +360,15 @@ def train_model(df, target, cancel_event: threading.Event | None = None):
 
 
 def predict_model(model, data, columns, global_df=None):
+  #===============================INPUT PREPROCESSING/CLEANING =========================
+  
     """run prediction on a single row or a dataframe"""
     if isinstance(data, pd.DataFrame):
         df = data.copy()
     else:
         df = pd.DataFrame([data])
+
+
 
     meta = getattr(model, "_automl_meta", {})
     num_cols = set(meta.get("numeric_columns", []))
@@ -372,9 +376,11 @@ def predict_model(model, data, columns, global_df=None):
     known_cats = meta.get("known_categorical_values")
 
     df = _prepare_predict_input(df, num_cols, fill_vals, columns, known_cats)
-
+#INPUT PROCESSING OVER ================================================================================
     preds = model.predict(df)
 
+
+    #DECODE THE PREDICTION TO ORIGINAL CATEGORY USING LE 
     label_classes = meta.get("label_classes")
     decoded = preds.tolist()
     if label_classes and all(isinstance(p, (int, np.integer)) for p in preds):
@@ -386,10 +392,11 @@ def predict_model(model, data, columns, global_df=None):
         "problem_type": meta.get("problem_type"),
         "target": meta.get("target"),
     }
-
+#================================================================================================================
     # also return probabilities if the model supports it
     if hasattr(model, "predict_proba") and len(df) == 1:
         try:
+            #give out probability dictionary , checks in cat or numerical
             proba = model.predict_proba(df)[0].tolist()
             result["probabilities"] = {
                 (label_classes[i] if label_classes else str(i)): round(p, 4)
@@ -405,24 +412,31 @@ def predict_dataset(model, file_df, columns, global_df=None):
     """run predictions on a whole csv file"""
     if file_df.empty:
         return []
-
+ 
+ 
+ #get the model metadata =======================================================
     meta = getattr(model, "_automl_meta", {})
     orig_cols = meta.get("original_columns", [])
     if not orig_cols and global_df is not None:
         orig_cols = list(global_df.columns)
         
+        #check input===========================================
     missing = [c for c in orig_cols if c not in file_df.columns]
     if missing:
         raise ValueError(f"Uploaded dataset is missing columns: {', '.join(missing)}")
 
+
+#PREPARE INPUT=====================================================================
     input_df = file_df[orig_cols].copy()
     num_cols = set(meta.get("numeric_columns", []))
     fill_vals = meta.get("numeric_fill_values", {})
     known_cats = meta.get("known_categorical_values")
 
     input_df = _prepare_predict_input(input_df, num_cols, fill_vals, columns, known_cats)
+#PREDICT =======================================================================================
     preds = model.predict(input_df)
 
+#DECODEEEE======================================================================================
     label_classes = meta.get("label_classes")
     decoded = preds.tolist()
     if label_classes and all(isinstance(p, (int, np.integer)) for p in preds):
