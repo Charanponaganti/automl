@@ -15,12 +15,12 @@ import pandas as pd
 import numpy as np
 import threading
 
-
+#stop if user cancels 
 class TrainingCancelledError(Exception):
     """thrown when someone cancels training mid-way"""
     pass
 
-
+# ======class or reg =========
 def _detect_problem_type(y):
     """figure out if we're doing classification or regression
     - strings / booleans -> classification
@@ -35,7 +35,7 @@ def _detect_problem_type(y):
         return "classification"
     return "regression"
 
-
+# ========= divide the features =========
 def _infer_column_types(df: pd.DataFrame):
     """split columns into numeric vs categorical
     also handles the case where a column looks like numbers
@@ -65,7 +65,7 @@ def _infer_column_types(df: pd.DataFrame):
 
     return numeric, categorical
 
-
+# ========= useless features =========(based on cardinaliry)
 def _find_redundant_features(df: pd.DataFrame, threshold: int = 15):
     """find string columns with too many unique values
     these are probably IDs or names, not useful features
@@ -83,13 +83,13 @@ def _find_redundant_features(df: pd.DataFrame, threshold: int = 15):
             redundant.append(col)
     return redundant
 
-
+# ====== cancellation ============ 
 def _check_cancel(cancel_event: threading.Event | None):
     """raises error if user triggered cancel"""
     if cancel_event is not None and cancel_event.is_set():
         raise TrainingCancelledError("Training was cancelled by client disconnect.")
 
-
+#preparing input for prediction 
 def _prepare_predict_input(df: pd.DataFrame, numeric_cols: list, fill_vals: dict, columns: list, known_categorical_values: dict = None):
     """clean up raw input data so it matches what the model expects"""
     X = df.copy()
@@ -100,17 +100,23 @@ def _prepare_predict_input(df: pd.DataFrame, numeric_cols: list, fill_vals: dict
         else:
             X[col] = X[col].astype(str).fillna("missing")
             # only allow values the model has seen before
+            
+            #===========IF YOU GET UNKNOWN CATEGORY TREAT IT AS MISSING =========
             if known_categorical_values and col in known_categorical_values:
                 known_vals = set(known_categorical_values[col])
                 X[col] = X[col].where(X[col].isin(known_vals), "missing")
 
+
+#one hot encoding (binary encoding)
     X = pd.get_dummies(X)
+    #fill missing inputs with 0 
     X = X.reindex(columns=columns, fill_value=0)
     return X
 
 
 def train_model(df, target, cancel_event: threading.Event | None = None):
     # match column name case-insensitively
+    #target column there or not #makes a lowercase map of each column name 
     col_map = {c.lower(): c for c in df.columns}
     tgt_lower = target.strip().lower()
     if tgt_lower not in col_map:
@@ -118,7 +124,9 @@ def train_model(df, target, cancel_event: threading.Event | None = None):
     target = col_map[tgt_lower]
 
     _check_cancel(cancel_event)
-
+ 
+ 
+   # =====================DROP REDUNDANT==================
     # drop columns that are basically useless (high cardinality strings)
     redundant = _find_redundant_features(df.drop(columns=[target]))
     if target in redundant:
@@ -126,6 +134,8 @@ def train_model(df, target, cancel_event: threading.Event | None = None):
             f"Target column '{target}' has extremely high cardinality and cannot be used for training."
         )
 
+
+#DROP TARGET AND REDUNDANT 
     X = df.drop(columns=[target] + redundant)
     y = df[target].copy()
 
@@ -143,11 +153,13 @@ def train_model(df, target, cancel_event: threading.Event | None = None):
     num_cols, cat_cols = _infer_column_types(X)
     fill_vals = {}
 
-    # handle missing values
+    # handle missing values  in trainging data
     for col in X.columns:
         if col in num_cols:
             X[col] = pd.to_numeric(X[col], errors="coerce")
-            # fill NAs with median, or 0 if column is all NaN
+            
+            # fill NAs with median, or 0 if column is all NaN=======================
+            
             med = float(X[col].median()) if not X[col].dropna().empty else 0.0
             X[col] = X[col].fillna(med)
             fill_vals[col] = med
@@ -156,12 +168,17 @@ def train_model(df, target, cancel_event: threading.Event | None = None):
 
     _check_cancel(cancel_event)
 
+#===================
     # one-hot encode categoricals
     X = pd.get_dummies(X, drop_first=True)
     columns = list(X.columns)
 
+
+
+#=============DATA CLEANING ( FOR INF VALUES )===============
     # clean up infinities and constant columns
     X = X.replace([np.inf, -np.inf], np.nan)
+    #KEEP ALL THE NON NA INDICES
     ok_idx = X.dropna().index
     X = X.loc[ok_idx]
     y = y.loc[ok_idx]
@@ -169,7 +186,7 @@ def train_model(df, target, cancel_event: threading.Event | None = None):
 
     _check_cancel(cancel_event)
 
-    # stratify for classification if possible
+    # stratify for classification if possible  #ensuring ratio split of the categories ( not training on only one category)
     strat = None
     if prob_type == "classification" and y.value_counts().min() >= 2:
         strat = y
@@ -179,6 +196,8 @@ def train_model(df, target, cancel_event: threading.Event | None = None):
         X, y, test_size=0.2, random_state=42, stratify=strat
     )
 
+
+# MODEL MAP 
     # all the models we want to try
     if prob_type == "classification":
         candidates = {
@@ -237,7 +256,7 @@ def train_model(df, target, cancel_event: threading.Event | None = None):
         _check_cancel(cancel_event)
 
         try:
-            # figure out how many CV folds we can do
+            # figure out how many CV folds we can do      ====================CV FOLDS=======
             cv = min(5, len(y_train))
 
             if prob_type == "classification":
@@ -256,7 +275,7 @@ def train_model(df, target, cancel_event: threading.Event | None = None):
                 cv=cv, scoring=scoring,
                 n_jobs=1,  # keep at 1 so cancel check works
                 error_score=np.nan
-            )
+            )    #ALL THE CV SCORES VECTOR=========================
 
             _check_cancel(cancel_event)
 
@@ -264,7 +283,7 @@ def train_model(df, target, cancel_event: threading.Event | None = None):
             if len(good_scores) == 0:
                 raise ValueError("All CV folds failed")
 
-            cv_mean = float(np.mean(good_scores))
+            cv_mean = float(np.mean(good_scores))  # ============ CV MEAN ============
             cv_std = float(np.std(good_scores))
 
             if len(good_scores) < len(cv_scores):
@@ -272,7 +291,7 @@ def train_model(df, target, cancel_event: threading.Event | None = None):
 
             # train on full training set
             model.fit(X_train, y_train)
-            _check_cancel(cancel_event)
+            _check_cancel(cancel_event)       #=======================TRAINING====================
 
             preds = model.predict(X_test)
 
@@ -317,7 +336,9 @@ def train_model(df, target, cancel_event: threading.Event | None = None):
     for col in cat_cols:
         if col in df.columns:
             known_values[col] = df[col].dropna().astype(str).unique().tolist()
-
+     #KNOWN VALUES FOR PREDICTION ==================
+     
+     
     # stash metadata on the model object so we can use it later
     best_model._automl_meta = {
         "problem_type": prob_type,
