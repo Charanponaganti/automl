@@ -30,7 +30,7 @@ export default function EDAPage() {
       { id: "histograms", label: "Histograms" },
       { id: "categorical-distribution", label: "Categorical Distribution" },
       { id: "correlation-matrix", label: "Correlation Matrix" },
-      { id: "scatter-plots", label: "Scatter" },
+      { id: "scatter-plots", label: "Scatter Plots" },
       { id: "feature-importance", label: "Feature Importance" },
       { id: "missing-values", label: "Missing Values" },
       { id: "summary-statistics", label: "Summary" },
